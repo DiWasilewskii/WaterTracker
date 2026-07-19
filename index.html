@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Аква-Тамагочі</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="game-container">
+        <!-- Екран Тамагочі -->
+        <div class="pet-screen">
+            <div id="pet-avatar" class="pet alive">🐱</div>
+            <div id="pet-status" class="status-text">Я почуваюся чудово!</div>
+        </div>
+
+        <!-- Показники -->
+        <div class="stats-container">
+            <div class="stat-box">
+                <span class="stat-label">Випито води:</span>
+                <span id="water-count" class="stat-value">0</span> / <span id="water-goal">2000</span> мл
+            </div>
+            <div class="stat-box">
+                <span class="stat-label">Днів прожито:</span>
+                <span id="days-count" class="stat-value">0</span>
+            </div>
+        </div>
+
+        <!-- Прогрес-бар -->
+        <div class="progress-bar-container">
+            <div id="progress-fill" class="progress-fill"></div>
+        </div>
+
+        <!-- Кнопки керування -->
+        <div class="controls">
+            <button id="btn-drink" class="btn btn-main">🥛 Випити 250 мл</button>
+            <button id="btn-restart" class="btn btn-danger hidden">🥚 Завести нового улюбленця</button>
+        </div>
+
+        <!-- Демо-кнопка для тестування логіки смерті -->
+        <div class="dev-panel">
+            <button id="btn-simulate-day" class="btn-dev">Симулювати наступний день</button>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,140 @@
+/* Базові стилі та темний геймерський вайб */
+body {
+    background-color: #121214;
+    color: #e1e1e6;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+}
+
+.game-container {
+    background-color: #202024;
+    border: 4px solid #484848;
+    border-radius: 16px;
+    padding: 24px;
+    width: 350px;
+    text-align: center;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+}
+
+/* Екран з улюбленцем */
+.pet-screen {
+    background-color: #09090a;
+    border: 2px solid #323238;
+    border-radius: 8px;
+    padding: 30px;
+    margin-bottom: 20px;
+    min-height: 120px;
+}
+
+.pet {
+    font-size: 70px;
+    transition: transform 0.3s ease;
+}
+
+/* Прості анімації станів */
+.pet.alive {
+    animation: bounce 1.5s infinite alternate;
+}
+
+.pet.thirsty {
+    animation: shake 0.5s infinite;
+}
+
+.pet.dead {
+    transform: rotate(90deg);
+    filter: grayscale(100%);
+}
+
+.status-text {
+    margin-top: 15px;
+    font-size: 14px;
+    font-weight: bold;
+    color: #a8a8b3;
+}
+
+/* Статистика та прогрес */
+.stats-container {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 15px;
+    font-size: 14px;
+}
+
+.stat-value {
+    font-weight: bold;
+    color: #4da6ff;
+}
+
+.progress-bar-container {
+    background-color: #323238;
+    height: 12px;
+    border-radius: 6px;
+    overflow: hidden;
+    margin-bottom: 25px;
+}
+
+.progress-fill {
+    background-color: #0088ff;
+    width: 0%;
+    height: 100%;
+    transition: width 0.4s ease;
+}
+
+/* Кнопки */
+.btn {
+    width: 100%;
+    padding: 14px;
+    border: none;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.btn-main {
+    background-color: #0088ff;
+    color: white;
+}
+
+.btn-main:hover { background-color: #0066cc; }
+.btn-main:disabled { background-color: #29292e; color: #7c7c8a; cursor: not-allowed; }
+
+.btn-danger { background-color: #f75a68; color: white; }
+.btn-danger:hover { background-color: #c53b47; }
+
+.hidden { display: none; }
+
+/* Кнопка для розробника (тестування) */
+.dev-panel {
+    margin-top: 20px;
+    border-top: 1px dashed #323238;
+    padding-top: 10px;
+}
+
+.btn-dev {
+    background: transparent;
+    border: 1px solid #7c7c8a;
+    color: #7c7c8a;
+    font-size: 11px;
+    padding: 5px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+/* Анімації */
+@keyframes bounce {
+    from { transform: translateY(0); }
+    to { transform: translateY(-8px); }
+}
+
+@keyframes shake {
+    0% { transform: translateX(0); }
+    25% { transform: translateX(-2px); }
+    75% { transform: translateX(2px); }
+    100% { transform: translateX(0); }
+}
