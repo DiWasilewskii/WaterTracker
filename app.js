@@ -93,8 +93,7 @@ function updateUI() {
 
     // Логіка відображення тамагочі залежно від стану
     if (gameState.isDead) {
-        petAvatar.textContent = "💀";
-        petAvatar.className = "pet dead";
+        petAvatar.className = "pet dead"; // Додає ефект смерті через CSS
         petStatus.textContent = `Твій улюбленець помер від дегідратації на ${gameState.daysSurvived} день... Тобі соромно?`;
         
         btnDrink.disabled = true;
@@ -103,17 +102,14 @@ function updateUI() {
         btnDrink.disabled = false;
         btnRestart.classList.add('hidden');
 
-        // Зміна настрою залежно від кількості випитої води
+        // Зміна стану персонажа через CSS-класи
         if (gameState.waterDrunk === 0) {
-            petAvatar.textContent = "🐱";
             petAvatar.className = "pet thirsty";
             petStatus.textContent = "Я вмираю від спраги! Випий води!";
         } else if (gameState.waterDrunk < DAILY_GOAL) {
-            petAvatar.textContent = "🥤";
             petAvatar.className = "pet alive";
             petStatus.textContent = "Краще, але треба ще. Пий далі!";
         } else {
-            petAvatar.textContent = "👑";
             petAvatar.className = "pet alive";
             petStatus.textContent = "Норма виконана! Я буду жити завтра!";
         }

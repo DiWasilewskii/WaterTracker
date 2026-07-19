@@ -31,22 +31,25 @@ body {
 }
 
 .pet {
-    font-size: 70px;
-    transition: transform 0.3s ease;
+    height: 90px; /* Задаємо фіксовану висоту для SVG */
+    width: auto;
+    transition: transform 0.3s ease, filter 0.3s ease;
 }
 
 /* Прості анімації станів */
 .pet.alive {
     animation: bounce 1.5s infinite alternate;
+    filter: drop-shadow(0 0 8px rgba(0, 136, 255, 0.4)); /* Легке блакитне сяйво для здорового стану */
 }
 
 .pet.thirsty {
     animation: shake 0.5s infinite;
+    filter: saturate(0.5) sepia(0.2); /* Трішки бляклий колір, коли хоче пити */
 }
 
 .pet.dead {
-    transform: rotate(90deg);
-    filter: grayscale(100%);
+    transform: rotate(90deg) translateY(10px);
+    filter: grayscale(100%) brightness(40%); /* Робимо персонажа повністю сірим і темним */
 }
 
 .status-text {
