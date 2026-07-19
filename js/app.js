@@ -220,8 +220,17 @@ function updateUI() {
     totalVolumeCount.textContent = gameState.totalVolume;
     daysCount.textContent = gameState.daysSurvived;
 
-    const progressPercent = Math.min((gameState.waterDrunk / gameState.calculatedGoal) * 100, 100);
-    progressFill.style.width = `${progressPercent}%`;
+    // 1. Розрахунок та оновлення СИНЬОЇ шкали (Гідратація)
+    const waterPercent = Math.min((gameState.waterDrunk / gameState.calculatedGoal) * 100, 100);
+    progressFill.style.width = `${waterPercent}%`;
+
+    // 2. Розрахунок та оновлення ЧЕРВОНОЇ шкали (Загалом випито)
+    // Максимумом для червоної шкали зробимо денну ціль, але дозволимо їй заповнюватися на 100% і більше
+    const totalPercent = Math.min((gameState.totalVolume / gameState.calculatedGoal) * 100, 100);
+    if (totalVolumeFill) {
+        totalVolumeFill.style.width = `${totalPercent}%`;
+    }
+
     countdownTimer.textContent = formatTime(gameState.secondsLeft);
 
     if (isAnimatingDrink) return; 

@@ -21,32 +21,41 @@
         </div>
 
         <!-- Екран Тамагочі -->
-        <div class="pet-screen">
-            <img id="pet-avatar" class="pet alive" src="img/regular_water.svg" alt="Тамагочі">
-            <div id="pet-status" class="status-text">Завантаження...</div>
-            <div id="countdown-timer" class="countdown-timer">00:00:00</div>
-        </div>
+        <!-- Оновлений екран тамагочі з лічильником днів всередині -->
+<div class="pet-screen">
+    <div class="pet-days-badge">🔥 День: <span id="days-count">0</span></div>
+    
+    <img id="pet-avatar" src="img/regular_water.svg" class="pet alive" alt="Tamagotchi">
+    <p id="pet-status">Ціль на сьогодні — очікування розрахунку...</p>
+    <div id="countdown-timer" class="countdown-timer">01:00:00</div>
+</div>
 
-        <!-- Показники -->
-        <div class="stats-container">
-            <div class="stat-box full-width">
-                <span class="stat-label">Гідратація:</span>
-                <span id="water-count" class="stat-value">0</span> / <span id="water-goal">2000</span> мл
-            </div>
-            <div class="stat-box">
-                <span class="stat-label">Загалом випито:</span>
-                <span id="total-volume" class="stat-value">0</span> мл
-            </div>
-            <div class="stat-box">
-                <span class="stat-label">Прожито днів:</span>
-                <span id="days-count" class="stat-value">0</span>
-            </div>
+<!-- НОВИЙ БЛОК ШКАЛ (ЗАМІСТЬ СТАРИХ ПЛАШОК) -->
+<div class="status-bars-container">
+    <!-- Синя шкала: Гідратація -->
+    <div class="bar-wrapper">
+        <div class="bar-label">
+            <span>💧 Гідратація:</span>
+            <span><span id="water-count">0</span> / <span id="water-goal">2000</span> мл</span>
         </div>
+        <div class="custom-progress-bar blue-bar">
+            <div id="progress-fill" class="progress-fill-inner" style="width: 0%;"></div>
+        </div>
+    </div>
 
-        <!-- Прогрес-бар -->
-        <div class="progress-bar-container">
-            <div id="progress-fill" class="progress-fill"></div>
+    <!-- Червона шкала: Загалом випито -->
+    <div class="bar-wrapper">
+        <div class="bar-label">
+            <span>🥤 Загалом випито:</span>
+            <span><span id="total-volume">0</span> мл</span>
         </div>
+        <div class="custom-progress-bar red-bar">
+            <div id="total-volume-fill" class="progress-fill-inner" style="width: 0%;"></div>
+        </div>
+    </div>
+</div>
+
+       
 
         <!-- Зона керування -->
         <div class="controls-bar">
