@@ -1,4 +1,3 @@
-/* Базові стилі та темний геймерський вайб */
 body {
     background-color: #121214;
     color: #e1e1e6;
@@ -6,8 +5,9 @@ body {
     display: flex;
     justify-content: center;
     align-items: center;
-    height: 100vh;
+    min-height: 100vh;
     margin: 0;
+    padding: 20px 0;
 }
 
 .game-container {
@@ -15,48 +15,147 @@ body {
     border: 4px solid #484848;
     border-radius: 16px;
     padding: 24px;
-    width: 350px;
+    width: 360px;
     text-align: center;
     box-shadow: 0 10px 25px rgba(0,0,0,0.5);
 }
 
-/* Екран з улюбленцем */
+/* Налаштування профілю */
+.settings-panel {
+    background: #121214;
+    border: 1px solid #323238;
+    border-radius: 8px;
+    padding: 10px;
+    margin-bottom: 15px;
+    text-align: left;
+    font-size: 13px;
+}
+
+.settings-panel summary {
+    cursor: pointer;
+    font-weight: bold;
+    color: #4da6ff;
+    outline: none;
+}
+
+.settings-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.settings-panel input, .settings-panel select {
+    background: #202024;
+    border: 1px solid #484848;
+    color: white;
+    padding: 3px;
+    border-radius: 4px;
+    width: 70px;
+}
+
+.weather-setting {
+    margin-top: 10px;
+    display: flex;
+    justify-content: space-between;
+}
+.weather-setting input { width: 120px; }
+
+.btn-sub {
+    background: #0088ff;
+    border: none;
+    color: white;
+    padding: 4px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+/* Віджет погоди */
+.weather-widget {
+    background: #29292e;
+    border-radius: 8px;
+    padding: 10px;
+    font-size: 13px;
+    margin-bottom: 15px;
+    border-left: 4px solid #00ffaa;
+}
+
+.timer-settings {
+    margin-bottom: 15px;
+    font-size: 13px;
+    color: #a8a8b3;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.timer-settings select {
+    background-color: #121214;
+    color: #e1e1e6;
+    border: 1px solid #484848;
+    padding: 4px 8px;
+    border-radius: 4px;
+}
+
+/* Екран Тамагочі */
 .pet-screen {
     background-color: #09090a;
     border: 2px solid #323238;
     border-radius: 8px;
-    padding: 30px;
+    padding: 20px;
     margin-bottom: 20px;
-    min-height: 120px;
+    min-height: 160px;
 }
 
 .pet {
-    height: 90px; /* Задаємо фіксовану висоту для SVG */
+    height: 90px;
     width: auto;
     transition: transform 0.3s ease, filter 0.3s ease;
 }
 
-/* Прості анімації станів */
+/* Стан: Живий */
 .pet.alive {
     animation: bounce 1.5s infinite alternate;
-    filter: drop-shadow(0 0 8px rgba(0, 136, 255, 0.4)); /* Легке блакитне сяйво для здорового стану */
+    filter: drop-shadow(0 0 8px rgba(0, 136, 255, 0.4));
 }
 
-.pet.thirsty {
-    animation: shake 0.5s infinite;
-    filter: saturate(0.5) sepia(0.2); /* Трішки бляклий колір, коли хоче пити */
+/* Стан: Хворий */
+.pet.sick {
+    animation: shake 0.8s infinite;
+    filter: drop-shadow(0 0 8px rgba(247, 90, 104, 0.4));
 }
 
+/* Нова анімація стану Пиття води */
+.pet.drinking {
+    animation: gulp 0.4s 3 ease-in-out; 
+    filter: drop-shadow(0 0 12px #00ffaa);
+}
+
+/* Стан: Мертвий */
 .pet.dead {
-    transform: rotate(90deg) translateY(10px);
-    filter: grayscale(100%) brightness(40%); /* Робимо персонажа повністю сірим і темним */
+    animation: none;
+    filter: grayscale(100%) brightness(50%);
 }
 
 .status-text {
-    margin-top: 15px;
+    margin-top: 10px;
     font-size: 14px;
     font-weight: bold;
     color: #a8a8b3;
+    min-height: 40px;
+}
+
+.countdown-timer {
+    font-size: 18px;
+    font-family: monospace;
+    font-weight: bold;
+    margin-top: 8px;
+    color: #0088ff;
+}
+
+.countdown-timer.overdue {
+    color: #f75a68;
+    animation: blink 1s infinite alternate;
 }
 
 /* Статистика та прогрес */
@@ -67,10 +166,7 @@ body {
     font-size: 14px;
 }
 
-.stat-value {
-    font-weight: bold;
-    color: #4da6ff;
-}
+.stat-value { font-weight: bold; color: #4da6ff; }
 
 .progress-bar-container {
     background-color: #323238;
@@ -87,7 +183,6 @@ body {
     transition: width 0.4s ease;
 }
 
-/* Кнопки */
 .btn {
     width: 100%;
     padding: 14px;
@@ -96,48 +191,25 @@ body {
     font-size: 16px;
     font-weight: bold;
     cursor: pointer;
-    transition: background 0.2s;
 }
 
-.btn-main {
-    background-color: #0088ff;
-    color: white;
-}
-
+.btn-main { background-color: #0088ff; color: white; }
 .btn-main:hover { background-color: #0066cc; }
 .btn-main:disabled { background-color: #29292e; color: #7c7c8a; cursor: not-allowed; }
-
 .btn-danger { background-color: #f75a68; color: white; }
-.btn-danger:hover { background-color: #c53b47; }
-
 .hidden { display: none; }
 
-/* Кнопка для розробника (тестування) */
-.dev-panel {
-    margin-top: 20px;
-    border-top: 1px dashed #323238;
-    padding-top: 10px;
-}
-
-.btn-dev {
-    background: transparent;
-    border: 1px solid #7c7c8a;
-    color: #7c7c8a;
-    font-size: 11px;
-    padding: 5px 10px;
-    border-radius: 4px;
-    cursor: pointer;
-}
+.dev-panel { margin-top: 20px; border-top: 1px dashed #323238; padding-top: 10px; }
+.btn-dev { background: transparent; border: 1px solid #7c7c8a; color: #7c7c8a; font-size: 11px; padding: 5px 10px; cursor: pointer; }
 
 /* Анімації */
-@keyframes bounce {
-    from { transform: translateY(0); }
-    to { transform: translateY(-8px); }
-}
+@keyframes bounce { from { transform: translateY(0); } to { transform: translateY(-8px); } }
+@keyframes shake { 0% { transform: translateX(0); } 25% { transform: translateX(-2px); } 75% { transform: translateX(2px); } 100% { transform: translateX(0); } }
+@keyframes blink { from { opacity: 1; } to { opacity: 0.5; } }
 
-@keyframes shake {
-    0% { transform: translateX(0); }
-    25% { transform: translateX(-2px); }
-    75% { transform: translateX(2px); }
-    100% { transform: translateX(0); }
+/* Спеціальна анімація ковтання для drink_water.svg */
+@keyframes gulp {
+    0% { transform: scale(1) translateY(0); }
+    50% { transform: scale(1.15) translateY(-4px) rotate(-5deg); }
+    100% { transform: scale(1) translateY(0); }
 }

@@ -3,26 +3,63 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Аква-Тамагочі</title>
+    <title>Аква-Тамагочі Про</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="game-container">
-   <!-- Екран Тамагочі -->
-<div class="pet-screen">
-    <!-- Замість емодзі вставляємо твій SVG -->
-    <img id="pet-avatar" class="pet alive" src="img/regular_water.svg" alt="Тамагочі">
-    <div id="pet-status" class="status-text">Я почуваюся чудово!</div>
-</div>
+        
+        <!-- Панель налаштувань профілю та погоди -->
+        <details class="settings-panel">
+            <summary>⚙️ Налаштування профілю та погоди</summary>
+            <div class="settings-grid">
+                <label>Вага (кг): <input type="number" id="input-weight" value="60"></label>
+                <label>Зріст (см): <input type="number" id="input-height" value="170"></label>
+                <label>Вік: <input type="number" id="input-age" value="25"></label>
+                <label>Стать: 
+                    <select id="input-gender">
+                        <option value="male">Чоловік</option>
+                        <option value="female">Жінка</option>
+                    </select>
+                </label>
+            </div>
+            <div class="weather-setting">
+                <label>Місто: <input type="text" id="input-city" value="Київ"></label>
+                <button id="btn-update-profile" class="btn-sub">Оновити дані</button>
+            </div>
+        </details>
+
+        <!-- Віджет погоди -->
+        <div class="weather-widget">
+            Погода в <span id="weather-city">...</span>: <span id="weather-temp">--</span>°C 
+            <br><small id="weather-status">Введіть місто для розрахунку</small>
+        </div>
+
+        <div class="timer-settings">
+            <label for="interval-select">Нагадувати кожні:</label>
+            <select id="interval-select">
+                <option value="10">10 секунд (тест)</option>
+                <option value="1800">30 хвилин</option>
+                <option value="3600" selected>1 годину</option>
+                <option value="7200">2 години</option>
+            </select>
+        </div>
+
+        <!-- Екран Тамагочі -->
+        <div class="pet-screen">
+            <img id="pet-avatar" class="pet alive" src="img/regular_water.svg" alt="Тамагочі">
+            <div id="pet-status" class="status-text">Завантаження...</div>
+            <div id="countdown-timer" class="countdown-timer">00:00:00</div>
+        </div>
 
         <!-- Показники -->
         <div class="stats-container">
             <div class="stat-box">
-                <span class="stat-label">Випито води:</span>
+                <span class="stat-label">Випито:</span>
                 <span id="water-count" class="stat-value">0</span> / <span id="water-goal">2000</span> мл
             </div>
             <div class="stat-box">
-                <span class="stat-label">Днів прожито:</span>
+                <span class="stat-label">Прожито днів:</span>
                 <span id="days-count" class="stat-value">0</span>
             </div>
         </div>
@@ -32,13 +69,12 @@
             <div id="progress-fill" class="progress-fill"></div>
         </div>
 
-        <!-- Кнопки керування -->
+        <!-- Кнопки -->
         <div class="controls">
             <button id="btn-drink" class="btn btn-main">🥛 Випити 250 мл</button>
-            <button id="btn-restart" class="btn btn-danger hidden">🥚 Завести нового улюбленця</button>
+            <button id="btn-restart" class="btn btn-danger hidden">🥚 Новий улюбленець</button>
         </div>
 
-        <!-- Демо-кнопка для тестування логіки смерті -->
         <div class="dev-panel">
             <button id="btn-simulate-day" class="btn-dev">Симулювати наступний день</button>
         </div>
