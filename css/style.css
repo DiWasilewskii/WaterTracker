@@ -1,7 +1,9 @@
+/* ==========================================
+   1. ЗАГАЛЬНІ СТИЛІ ТА КОНТЕЙНЕР
+   ========================================== */
 body {
     background-color: #1c2e3d; /* Базовий колір до завантаження погоди */
     color: #e1e1e6;
-    /* Встановлюємо Comic Sans основним шрифтом */
     font-family: 'Comic Sans MS', 'Chalkboard SE', 'Comic Neue', sans-serif;
     display: flex;
     justify-content: center;
@@ -9,7 +11,7 @@ body {
     min-height: 100vh;
     margin: 0;
     padding: 20px 0;
-    transition: background 1s ease; /* Плавна зміна фону при зміні погоди */
+    transition: background 1s ease;
 }
 
 .game-container {
@@ -56,26 +58,9 @@ body {
     border-left: 3px solid #00ffaa;
 }
 
-.timer-settings {
-    margin-bottom: 15px;
-    font-size: 13px;
-    color: #a8a8b3;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.timer-settings select {
-    background-color: #121214;
-    color: #e1e1e6;
-    border: 1px solid #484848;
-    padding: 4px 8px;
-    border-radius: 4px;
-    font-family: inherit;
-}
-
-/* Екран Тамагочі */
-/* Базовий екран Тамагочі (за замовчуванням) */
+/* ==========================================
+   2. ЕКРАН ТАМАГОЧІ ТА ОВЕРЛЕЙ ПОГОДИ
+   ========================================== */
 .pet-screen {
     background-color: #09090a;
     border: 2px solid #323238;
@@ -83,11 +68,23 @@ body {
     padding: 20px;
     margin-bottom: 20px;
     min-height: 160px;
-    transition: background 0.8s ease, box-shadow 0.8s ease; /* Плавна зміна ефекту */
-    position: relative; /* Дозволяє позиціонувати елементи всередині */
+    position: relative;
+    overflow: hidden;
+    transition: background 0.8s ease, border-color 0.8s ease, color 0.5s ease;
 }
 
-/* Бейджик прожитих днів біля аватара */
+/* Шар для анімацій (дощ, сніг, сонце) */
+.weather-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none; /* Щоб анімації не перехоплювали кліки */
+    z-index: 1;
+}
+
+/* Бейджик прожитих днів */
 .pet-days-badge {
     position: absolute;
     top: 10px;
@@ -103,7 +100,264 @@ body {
     z-index: 5;
 }
 
-/* Контейнер для нових шкал */
+/* Вибір інтервалу на екрані */
+.pet-interval-wrapper {
+    position: absolute;
+    left: 12px;
+    bottom: 12px;
+    z-index: 10;
+}
+
+.pet-interval-select {
+    background: rgba(32, 32, 36, 0.75);
+    color: #4da6ff;
+    border: 2px solid #0088ff;
+    border-radius: 20px;
+    padding: 6px 10px;
+    font-size: 12px;
+    font-weight: bold;
+    font-family: inherit;
+    cursor: pointer;
+    outline: none;
+    backdrop-filter: blur(4px);
+    box-shadow: 0 4px 12px rgba(0, 136, 255, 0.25);
+    transition: transform 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+}
+
+.pet-interval-select:hover {
+    transform: scale(1.05);
+    background: rgba(42, 42, 48, 0.9);
+    box-shadow: 0 6px 16px rgba(0, 136, 255, 0.4);
+}
+
+.pet-interval-select option {
+    background-color: #121214;
+    color: #e1e1e6;
+}
+
+/* Кнопка-склянка всередині екрана */
+.btn-glass {
+    position: absolute;
+    right: 12px;
+    bottom: -20px;
+    transform: translateY(-50%);
+    width: 54px;
+    height: 54px;
+    padding: 0;
+    background: rgba(32, 32, 36, 0.6);
+    border: 2px solid #0088ff;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    backdrop-filter: blur(4px);
+    box-shadow: 0 4px 12px rgba(0, 136, 255, 0.3);
+    transition: transform 0.2s, background 0.2s, box-shadow 0.2s;
+    z-index: 10;
+}
+
+.btn-glass img {
+    height: 48px;
+    object-fit: contain;
+    filter: drop-shadow(0px 2px 4px rgba(0, 136, 255, 0.4));
+}
+
+.btn-glass:hover {
+    transform: translateY(-50%) scale(1.1);
+    background: rgba(42, 42, 48, 0.8);
+    box-shadow: 0 6px 16px rgba(0, 136, 255, 0.5);
+}
+
+.btn-glass:active {
+    transform: translateY(-50%) scale(0.95);
+}
+
+/* ==========================================
+   3. ПЕРСОНАЖ ТА ТАЙМЕР
+   ========================================== */
+.pet {
+    height: 90px;
+    width: auto;
+    position: relative;
+    z-index: 2; /* Поверх погоди */
+    transition: transform 0.3s ease, filter 0.3s ease;
+}
+
+.pet.alive { animation: bounce 1.5s infinite alternate; filter: drop-shadow(0 0 8px rgba(0, 136, 255, 0.4)); }
+.pet.sick { animation: shake 0.8s infinite; filter: drop-shadow(0 0 8px rgba(247, 90, 104, 0.4)); }
+.pet.drinking { animation: gulp 0.4s 3 ease-in-out; filter: drop-shadow(0 0 12px #00ffaa); }
+.pet.dead { animation: none; filter: grayscale(100%) brightness(50%); }
+
+/* Приховуємо елементи, якщо персонаж помер */
+.pet.dead ~ .btn-glass,
+.pet.dead ~ .pet-interval-wrapper {
+    display: none !important;
+}
+
+.countdown-timer {
+    position: relative;
+    z-index: 2;
+    font-size: 18px;
+    font-family: monospace;
+    font-weight: bold;
+    margin-top: 8px;
+    color: #0088ff;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+}
+
+.countdown-timer.overdue {
+    color: #f75a68;
+    animation: blink 1s infinite alternate;
+}
+
+/* ==========================================
+   4. СТИЛІ ТА АНІМАЦІЇ ПОГОДИ
+   ========================================== */
+/* ☀️ Сонячно */
+.pet-screen.weather-sunny {
+    background: linear-gradient(180deg, #7ec8e3 0%, #e0f7fa 100%);
+    color: #2c3e50;
+}
+
+.sun-ray {
+    position: absolute;
+    top: -30px;
+    right: -30px;
+    width: 120px;
+    height: 120px;
+    background: rgba(255, 235, 59, 0.4);
+    border-radius: 50%;
+    box-shadow: 0 0 40px 20px rgba(255, 235, 59, 0.5);
+    animation: pulse-sun 4s infinite alternate ease-in-out;
+}
+
+@keyframes pulse-sun {
+    0% { transform: scale(0.9); opacity: 0.7; }
+    100% { transform: scale(1.15); opacity: 1; }
+}
+
+/* ☁️ Хмарно */
+.pet-screen.weather-cloudy {
+    background: linear-gradient(180deg, #90a4ae 0%, #cfd8dc 100%);
+    color: #263238;
+}
+
+.cloud {
+    position: absolute;
+    background: rgba(255, 255, 255, 0.55);
+    border-radius: 20px;
+    animation: float-clouds linear infinite;
+}
+
+.cloud-1 {
+    top: 15%;
+    width: 70px;
+    height: 24px;
+    animation-duration: 18s;
+}
+
+.cloud-2 {
+    top: 35%;
+    width: 100px;
+    height: 30px;
+    animation-duration: 25s;
+    animation-delay: -7s;
+}
+
+@keyframes float-clouds {
+    0% { transform: translateX(-110px); }
+    100% { transform: translateX(350px); }
+}
+
+/* 🌧️ Дощ */
+.pet-screen.weather-rainy {
+    background: linear-gradient(180deg, #37474f 0%, #607d8b 100%);
+    color: #ffffff;
+}
+
+.rain-drop {
+    position: absolute;
+    top: -15px;
+    width: 2px;
+    height: 14px;
+    background: rgba(255, 255, 255, 0.6);
+    opacity: 0.8;
+    animation: fall-rain linear infinite;
+}
+
+@keyframes fall-rain {
+    0% { transform: translateY(0); }
+    100% { transform: translateY(280px); }
+}
+
+/* ❄️ Сніг */
+.pet-screen.weather-snowy {
+    background: linear-gradient(180deg, #b2ebf2 0%, #e0f7fa 100%);
+    color: #37474f;
+}
+
+.snowflake {
+    position: absolute;
+    top: -10px;
+    width: 6px;
+    height: 6px;
+    background: #ffffff;
+    border-radius: 50%;
+    opacity: 0.9;
+    animation: fall-snow linear infinite;
+}
+
+@keyframes fall-snow {
+    0% { transform: translateY(0) translateX(0); }
+    50% { transform: translateY(130px) translateX(10px); }
+    100% { transform: translateY(280px) translateX(-10px); }
+}
+
+/* 🌩️ Гроза */
+.pet-screen.weather-thunder {
+    background: linear-gradient(180deg, #263238 0%, #455a64 100%);
+    color: #ffffff;
+}
+
+.lightning-flash {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(255, 255, 255, 0.8);
+    opacity: 0;
+    animation: flash 5s infinite;
+}
+
+@keyframes flash {
+    0%, 92%, 94%, 96%, 100% { opacity: 0; }
+    93%, 95% { opacity: 0.8; }
+}
+
+/* 🌡️ Градієнти за температурою (резервні / додаткові) */
+.pet-screen.weather-freezing {
+    background: linear-gradient(180deg, #1b2d3c 0%, #090e14 100%);
+    border-color: #4ba3e3;
+}
+.pet-screen.weather-chilly {
+    background: linear-gradient(180deg, #242b35 0%, #0a0d10 100%);
+    border-color: #5c6470;
+}
+.pet-screen.weather-mild {
+    background: linear-gradient(180deg, #1a3322 0%, #070f0a 100%);
+    border-color: #38734b;
+}
+.pet-screen.weather-warm {
+    background: linear-gradient(180deg, #3d351d 0%, #121008 100%);
+    border-color: #8c763e;
+}
+.pet-screen.weather-hot {
+    background: linear-gradient(180deg, #4d1c18 0%, #170706 100%);
+    border-color: #bd3a2f;
+}
+
+/* ==========================================
+   5. ШКАЛИ ПРОГРЕСУ ТА ІНДИКАТОРИ
+   ========================================== */
 .status-bars-container {
     display: flex;
     flex-direction: column;
@@ -129,7 +383,6 @@ body {
     color: #e0e0e6;
 }
 
-/* Базовий стиль обох прогрес-барів */
 .custom-progress-bar {
     width: 100%;
     height: 14px;
@@ -139,144 +392,29 @@ body {
     border: 1px solid #323238;
 }
 
-/* Внутрішній заповнювач (спільні стилі) */
 .progress-fill-inner {
     height: 100%;
     width: 0%;
     transition: width 0.5s ease;
 }
 
-/* СИНЯ ШКАЛА (Гідратація) */
 .blue-bar .progress-fill-inner {
     background: linear-gradient(90deg, #0052d4 0%, #4364f7 50%, #6fb1fc 100%);
     box-shadow: 0 0 8px rgba(67, 100, 247, 0.5);
 }
 
-/* ЧЕРВОНА ШКАЛА (Загалом випито) */
 .red-bar .progress-fill-inner {
     background: linear-gradient(90deg, #8a2387 0%, #e94057 50%, #f27121 100%);
     box-shadow: 0 0 8px rgba(233, 64, 87, 0.5);
 }
-/* --- ФОНИ ДЛЯ ЕКРАНА ЗАЛЕЖНО ВІД ПОГОДИ --- */
 
-/* Мороз / Сніг (< 0°C) */
-.pet-screen.weather-freezing {
-    background: linear-gradient(180deg, #1b2d3c 0%, #090e14 100%);
-    box-shadow: inset 0 0 15px rgba(0, 183, 255, 0.2), 0 0 10px rgba(0, 183, 255, 0.1);
-    border-color: #4ba3e3;
-}
-
-/* Прохолодно / Хмарно (0°C - 10°C) */
-.pet-screen.weather-chilly {
-    background: linear-gradient(180deg, #242b35 0%, #0a0d10 100%);
-    box-shadow: inset 0 0 15px rgba(255, 255, 255, 0.05);
-    border-color: #5c6470;
-}
-
-/* Комфортна / Весняна погода (10°C - 20°C) */
-.pet-screen.weather-mild {
-    background: linear-gradient(180deg, #1a3322 0%, #070f0a 100%);
-    box-shadow: inset 0 0 15px rgba(0, 255, 136, 0.1);
-    border-color: #38734b;
-}
-
-/* Тепло / Літо (20°C - 30°C) */
-.pet-screen.weather-warm {
-    background: linear-gradient(180deg, #3d351d 0%, #121008 100%);
-    box-shadow: inset 0 0 15px rgba(255, 200, 0, 0.1);
-    border-color: #8c763e;
-}
-
-/* Екстремальна спека (>= 30°C) */
-.pet-screen.weather-hot {
-    background: linear-gradient(180deg, #4d1c18 0%, #170706 100%);
-    box-shadow: inset 0 0 20px rgba(255, 68, 0, 0.25);
-    border-color: #bd3a2f;
-}
-
-.pet {
-    height: 90px;
-    width: auto;
-    transition: transform 0.3s ease, filter 0.3s ease;
-}
-
-.pet.alive { animation: bounce 1.5s infinite alternate; filter: drop-shadow(0 0 8px rgba(0, 136, 255, 0.4)); }
-.pet.sick { animation: shake 0.8s infinite; filter: drop-shadow(0 0 8px rgba(247, 90, 104, 0.4)); }
-.pet.drinking { animation: gulp 0.4s 3 ease-in-out; filter: drop-shadow(0 0 12px #00ffaa); }
-.pet.dead { animation: none; filter: grayscale(100%) brightness(50%); }
-
-.status-text {
-    margin-top: 10px;
-    font-size: 14px;
-    font-weight: bold;
-    color: #a8a8b3;
-    min-height: 40px;
-}
-
-.countdown-timer {
-    font-size: 18px;
-    font-family: monospace;
-    font-weight: bold;
-    margin-top: 8px;
-    color: #0088ff;
-}
-
-.countdown-timer.overdue {
-    color: #f75a68;
-    animation: blink 1s infinite alternate;
-}
-
-/* Статистика */
-.stats-container {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    justify-content: space-between;
-    margin-bottom: 15px;
-    font-size: 13px;
-}
-
-.stat-box {
-    background: #121214;
-    padding: 8px;
-    border-radius: 6px;
-    flex: 1;
-    min-width: 140px;
-    border: 1px solid #29292e;
-}
-
-.stat-box.full-width {
-    flex: unset;
-    width: 100%;
-}
-
-.stat-value { font-weight: bold; color: #4da6ff; }
-
-.progress-bar-container {
-    background-color: #323238;
-    height: 14px;
-    border-radius: 7px;
-    overflow: hidden;
-    margin-bottom: 25px;
-}
-
-.progress-fill {
-    background-color: #0088ff;
-    width: 0%;
-    height: 100%;
-    transition: width 0.4s ease;
-}
-
-/* Керування баром */
+/* ==========================================
+   6. ПАНЕЛЬ КЕРУВАННЯ ТА КНОПКИ
+   ========================================== */
 .controls-bar {
     display: flex;
     flex-direction: column;
     gap: 12px;
-}
-
-.selection-row {
-    display: flex;
-    gap: 8px;
 }
 
 .input-control {
@@ -318,9 +456,11 @@ body {
 .hidden { display: none !important; }
 
 .dev-panel { margin-top: 20px; border-top: 1px dashed #323238; padding-top: 10px; }
-.btn-dev { background: transparent; border: 1px solid #7c7c8a; color: #7c7c8a; font-size: 11px; padding: 5px 10px; cursor: pointer; font-family: inherit;}
+.btn-dev { background: transparent; border: 1px solid #7c7c8a; color: #7c7c8a; font-size: 11px; padding: 5px 10px; cursor: pointer; font-family: inherit; }
 
-/* МОДАЛЬНЕ ВІКНО НАЛАШТУВАНЬ */
+/* ==========================================
+   7. МОДАЛЬНІ ВІКНА
+   ========================================== */
 .modal {
     position: fixed;
     z-index: 100;
@@ -370,7 +510,7 @@ body {
     color: #a8a8b3;
 }
 
-.settings-grid input, .settings-grid select {
+.settings-grid input, .settings-grid select, #input-custom-minutes {
     background: #121214;
     border: 1px solid #484848;
     color: white;
@@ -378,8 +518,6 @@ body {
     border-radius: 6px;
     margin-top: 4px;
     font-family: inherit;
-    
-    /* ОЦЕ ВИПРАВИТЬ ВИЛАЗЕННЯ ЗА МЕЖІ: */
     width: 100%;
     box-sizing: border-box; 
 }
@@ -398,8 +536,6 @@ body {
     padding: 8px;
     border-radius: 6px;
     font-family: inherit;
-    
-    /* Додаємо сюди теж, щоб поле міста не косило */
     width: 100%;
     box-sizing: border-box;
 }
@@ -423,17 +559,43 @@ body {
     text-align: center;
 }
 
-/* Анімації */
-@keyframes bounce { from { transform: translateY(0); } to { transform: translateY(-8px); } }
-@keyframes shake { 0% { transform: translateX(0); } 25% { transform: translateX(-2px); } 75% { transform: translateX(2px); } 100% { transform: translateX(0); } }
-@keyframes blink { from { opacity: 1; } to { opacity: 0.5; } }
+.drink-modal-body {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 15px;
+}
+
+.drink-modal-body label {
+    display: flex;
+    flex-direction: column;
+    font-size: 13px;
+    color: #a8a8b3;
+    gap: 4px;
+}
+
+/* ==========================================
+   8. АНІМАЦІЇ КЛЮЧОВИХ КАДРІВ (KEYFRAMES)
+   ========================================== */
+@keyframes bounce { 
+    from { transform: translateY(0); } 
+    to { transform: translateY(-8px); } 
+}
+
+@keyframes shake { 
+    0% { transform: translateX(0); } 
+    25% { transform: translateX(-2px); } 
+    75% { transform: translateX(2px); } 
+    100% { transform: translateX(0); } 
+}
+
+@keyframes blink { 
+    from { opacity: 1; } 
+    to { opacity: 0.5; } 
+}
+
 @keyframes gulp {
     0% { transform: scale(1) translateY(0); }
     50% { transform: scale(1.15) translateY(-4px) rotate(-5deg); }
     100% { transform: scale(1) translateY(0); }
-}
-
-#input-custom-minutes {
-    width: 100%;
-    box-sizing: border-box;
 }

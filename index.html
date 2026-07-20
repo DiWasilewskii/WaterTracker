@@ -16,60 +16,62 @@
             
             <!-- Віджет погоди -->
             <div class="weather-widget">
-                <span id="weather-city">...</span>: <span id="weather-temp">--</span>°C
+                <span id="weather-city">...</span>: <span id="weather-temp">--</span>
             </div>
         </div>
 
         <!-- Екран Тамагочі -->
-        <!-- Оновлений екран тамагочі з лічильником днів всередині -->
-<div class="pet-screen">
-    <div class="pet-days-badge">🔥 День: <span id="days-count">0</span></div>
-    
-    <img id="pet-avatar" src="img/regular_water.svg" class="pet alive" alt="Tamagotchi">
-    <p id="pet-status">Ціль на сьогодні — очікування розрахунку...</p>
-    <div id="countdown-timer" class="countdown-timer">01:00:00</div>
-</div>
-
-<!-- НОВИЙ БЛОК ШКАЛ (ЗАМІСТЬ СТАРИХ ПЛАШОК) -->
-<div class="status-bars-container">
-    <!-- Синя шкала: Гідратація -->
-    <div class="bar-wrapper">
-        <div class="bar-label">
-            <span>💧 Гідратація:</span>
-            <span><span id="water-count">0</span> / <span id="water-goal">2000</span> мл</span>
-        </div>
-        <div class="custom-progress-bar blue-bar">
-            <div id="progress-fill" class="progress-fill-inner" style="width: 0%;"></div>
-        </div>
-    </div>
-
-    <!-- Червона шкала: Загалом випито -->
-    <div class="bar-wrapper">
-        <div class="bar-label">
-            <span>🥤 Загалом випито:</span>
-            <span><span id="total-volume">0</span> мл</span>
-        </div>
-        <div class="custom-progress-bar red-bar">
-            <div id="total-volume-fill" class="progress-fill-inner" style="width: 0%;"></div>
-        </div>
-    </div>
-</div>
-
-       
-
-        <!-- Зона керування -->
-        <div class="controls-bar">
-            <div class="selection-row">
-                <select id="select-drink" class="input-control">
-                    <option value="water">💧 Чиста вода (100%)</option>
-                    <option value="tea">🍵 Зелений чай (90%)</option>
-                    <option value="coffee">☕ Кава (50%)</option>
-                    <option value="soda">🥤 Газировка (40%)</option>
+        <div class="pet-screen">
+            <div class="pet-days-badge">🔥 День: <span id="days-count">0</span></div>
+            
+            <img id="pet-avatar" src="img/charachter/regular_water.svg" class="pet alive" alt="Tamagotchi">
+            <p id="pet-status">Ціль на сьогодні — очікування розрахунку...</p>
+            <div id="countdown-timer" class="countdown-timer">01:00:00</div>
+            
+            <!-- Селект інтервалу (лівий нижній куток) -->
+            <div class="pet-interval-wrapper">
+                <select id="interval-select" class="pet-interval-select" title="Інтервал нагадувань">
+                    <option value="1800">30 хв</option>
+                    <option value="3600" selected>1 год</option>
+                    <option value="7200">2 год</option>
+                    <option value="10800">3 год</option>
+                    <option value="custom">Свій...</option>
                 </select>
-                
-                <input type="number" id="input-custom-volume" class="input-control text-input" value="250" min="10" max="2000" placeholder="мл">
             </div>
-            <button id="btn-drink" class="btn btn-main">🥛 Прийняти напій</button>
+
+            <!-- Кнопка-склянка (правий нижній куток) -->
+            <button id="btn-open-drink-modal" class="btn-glass" title="Випити">
+                <img src="img/button/glass.svg" alt="Пити воду">
+            </button>
+        </div>
+
+        <!-- ЗОНА ШКАЛ (ПРОГРЕС-БАРИ) -->
+        <div class="status-bars-container">
+            <!-- Синя шкала: Гідратація -->
+            <div class="bar-wrapper">
+                <div class="bar-label">
+                    <span>💧 Гідратація:</span>
+                    <span><span id="water-count">0</span> / <span id="water-goal">2000</span> мл</span>
+                </div>
+                <div class="custom-progress-bar blue-bar">
+                    <div id="progress-fill" class="progress-fill-inner" style="width: 0%;"></div>
+                </div>
+            </div>
+
+            <!-- Червона шкала: Загалом випито -->
+            <div class="bar-wrapper">
+                <div class="bar-label">
+                    <span>🥤 Загалом випито:</span>
+                    <span><span id="total-volume">0</span> мл</span>
+                </div>
+                <div class="custom-progress-bar red-bar">
+                    <div id="total-volume-fill" class="progress-fill-inner" style="width: 0%;"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Нижня зона керування -->
+        <div class="controls-bar">
             <button id="btn-restart" class="btn btn-danger hidden">🥚 Новий улюбленець</button>
         </div>
 
@@ -79,55 +81,64 @@
     </div>
 
     <!-- Модальне вікно налаштувань (Popup) -->
-    <!-- Оновлене модальне вікно налаштувань у index.html -->
-<div id="settings-modal" class="modal hidden">
-    <div class="modal-content">
-        <span id="btn-close-settings" class="close-modal">&times;</span>
-        <h3>⚙️ Профіль та Погода</h3>
-        
-        <div class="settings-grid">
-            <label>Вага (кг): <input type="number" id="input-weight" value="60"></label>
-            <label>Зріст (см): <input type="number" id="input-height" value="170"></label>
-            <label>Вік: <input type="number" id="input-age" value="25"></label>
-            <label>Стать: 
-                <select id="input-gender">
-                    <option value="male">Чоловік</option>
-                    <option value="female">Жінка</option>
-                </select>
-            </label>
-        </div>
-
-        <!-- НОВА СЕКЦІЯ: Налаштування інтервалу пиття -->
-        <h4 style="margin: 15px 0 5px 0; color: #4da6ff;">⏱️ Інтервал нагадувань</h4>
-        <div class="settings-grid" style="margin-top: 5px;">
-            <label>Обрати готовий:
-                <select id="interval-select">
-                    <option value="10">10 секунд (тест)</option>
-                    <option value="900">15 хвилин</option>
-                    <option value="1800">30 хвилин</option>
-                    <option value="2700">45 хвилин</option>
-                    <option value="3600" selected>1 годину</option>
-                    <option value="5400">1.5 години</option>
-                    <option value="7200">2 години</option>
-                    <option value="10800">3 години</option>
-                    <option value="custom">Свій варіант...</option>
-                </select>
-            </label>
+    <div id="settings-modal" class="modal hidden">
+        <div class="modal-content">
+            <span id="btn-close-settings" class="close-modal">&times;</span>
+            <h3>⚙️ Профіль та Погода</h3>
             
-            <label id="custom-interval-wrapper" class="hidden">Власні хвилини:
-                <input type="number" id="input-custom-minutes" value="60" min="1" max="1440">
-            </label>
-        </div>
+            <div class="settings-grid">
+                <label>Вага (кг): <input type="number" id="input-weight" value="60"></label>
+                <label>Зріст (см): <input type="number" id="input-height" value="170"></label>
+                <label>Вік: <input type="number" id="input-age" value="25"></label>
+                <label>Стать: 
+                    <select id="input-gender">
+                        <option value="male">Чоловік</option>
+                        <option value="female">Жінка</option>
+                    </select>
+                </label>
+            </div>
 
-        <div class="weather-setting">
-            <label>Місто: <input type="text" id="input-city" value="Київ"></label>
-            <button id="btn-update-profile" class="btn-sub">Зберегти та оновити</button>
+            <!-- Кастомний інтервал (з'являється, якщо обрано "Свій...") -->
+            <div id="custom-interval-wrapper" class="weather-setting hidden">
+                <label>Свій інтервал (хвилини): 
+                    <input type="number" id="input-custom-minutes" value="60" min="1" max="1440">
+                </label>
+            </div>
+
+            <div class="weather-setting">
+                <label>Місто: <input type="text" id="input-city" value="Київ"></label>
+                <button id="btn-update-profile" class="btn-sub">Зберегти та оновити</button>
+            </div>
+            <p id="weather-status" class="weather-status-text">Очікування дії...</p>
         </div>
-        <p id="weather-status" class="weather-status-text">Очікування дії...</p>
     </div>
-</div>
 
-    <!-- Підключення скриптів з папки js (weather.js має бути першим) -->
+    <!-- Модальне вікно вибору напою -->
+    <div id="drink-modal" class="modal hidden">
+        <div class="modal-content">
+            <span id="btn-close-drink" class="close-modal">&times;</span>
+            <h3>🥤 Що та скільки ви випили?</h3>
+            
+            <div class="drink-modal-body">
+                <label>Обрати напій:
+                    <select id="select-drink" class="input-control">
+                        <option value="water">💧 Чиста вода (100%)</option>
+                        <option value="tea">🍵 Зелений чай (90%)</option>
+                        <option value="coffee">☕ Кава (50%)</option>
+                        <option value="soda">🥤 Газировка (40%)</option>
+                    </select>
+                </label>
+
+                <label>Об'єм (мл):
+                    <input type="number" id="input-custom-volume" class="input-control text-input" value="250" min="10" max="2000" placeholder="мл">
+                </label>
+
+                <button id="btn-drink-confirm" class="btn btn-main" style="margin-top: 15px;">Зарахувати напій</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Підключення скриптів з папки js -->
     <script src="js/weather.js"></script>
     <script src="js/app.js"></script>
 </body>
