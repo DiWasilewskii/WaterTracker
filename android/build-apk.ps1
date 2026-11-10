@@ -6,8 +6,10 @@
 #   - Android build-tools 34 і платформу android-34 (dl.google.com)
 param(
     [string]$Tools = (Join-Path $env:LOCALAPPDATA "WaterTrackerAndroidTools"),
-    [string]$VersionName = "1.3",
-    [int]$VersionCode = 5
+    [string]$VersionName = "1.4",
+    [int]$VersionCode = 6,
+    # Мінімальний versionCode APK для веб-оновлень (APK 1.4 — перший, що їх підтримує)
+    [int]$MinWebNative = 6
 )
 $ErrorActionPreference = "Stop"
 $ProgressPreference = "SilentlyContinue"
@@ -50,13 +52,22 @@ function Run($exe) {
 # --- 1. Чиста папка збирання та веб-файли гри в assets/www ---
 if (Test-Path $Build) { Remove-Item -Recurse -Force $Build }
 $www = Join-Path $Build "assets\www"
-New-Item -ItemType Directory -Force $www, "$www\css", "$www\js", "$www\img\charachter", "$www\img\button" | Out-Null
-Copy-Item "$Root\index.html", "$Root\manifest.json" $www
-Copy-Item "$Root\css\*.css" "$www\css"
-Copy-Item "$Root\js\*.js" "$www\js"
-Copy-Item "$Root\img\charachter\*.png" "$www\img\charachter"
-Copy-Item "$Root\img\button\*.png" "$www\img\button"
-Copy-Item "$Root\img\icon-192.png" "$www\img"
+# Список файлів і їхні хеші — з web-version.json (оновлюється web-release.ps1)
+powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $Root "web-release.ps1") -MinNativeCode $MinWebNative
+if ($LASTEXITCODE -ne 0) { throw "web-release.ps1 завершився з помилкою" }
+$webManifest = Get-Content (Join-Path $Root "web-version.json") -Raw -Encoding UTF8 | ConvertFrom-Json
+$utf8 = New-Object Text.UTF8Encoding $false
+foreach ($rel in @($webManifest.files.PSObject.Properties.Name) + "web-version.json") {
+    $dest = Join-Path $www $rel
+    New-Item -ItemType Directory -Force (Split-Path $dest) | Out-Null
+    $src = Join-Path $Root $rel
+    if ($rel -match '\.(html|css|js|json)$') {
+        # як у git: LF, щоб хеші збігались з файлами на GitHub
+        [IO.File]::WriteAllText($dest, [IO.File]::ReadAllText($src, $utf8).Replace("`r`n", "`n"), $utf8)
+    } else {
+        Copy-Item $src $dest
+    }
+}
 
 # --- 2. Ресурси ---
 Run "$BT\aapt2.exe" compile --dir "$AppDir\res" -o "$Build\res.zip"

@@ -5,7 +5,6 @@ import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.content.res.AssetManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -22,9 +21,9 @@ import java.io.IOException;
 import java.io.InputStream;
 
 /**
- * Обгортка над веб-версією: файли гри лежать в assets/www і віддаються
- * з https-адреси (а не file://), щоб localStorage і запити до API погоди
- * працювали так само, як у браузері.
+ * Обгортка над веб-версією: файли гри беруться з оновлення, завантаженого
+ * WebUpdater, або з assets/www і віддаються з https-адреси (а не file://),
+ * щоб localStorage і запити до API погоди працювали так само, як у браузері.
  */
 public class MainActivity extends Activity {
     private static final String HOST = "appassets.androidplatform.net";
@@ -32,6 +31,8 @@ public class MainActivity extends Activity {
 
     private WebView webView;
     private Updater updater;
+    private WebUpdater webUpdater;
+    private long pausedAt = 0;
 
     @SuppressLint("SetJavaScriptEnabled")
     @Override
@@ -56,6 +57,11 @@ public class MainActivity extends Activity {
         // Міст для гри: передає час наступного пиття в нативні нагадування
         webView.addJavascriptInterface(new ReminderBridge(), "AndroidBridge");
 
+        // Веб-частина гри оновлюється сама: застосовуємо завантажене раніше оновлення
+        webUpdater = new WebUpdater(this);
+        webUpdater.applyStaged();
+        webUpdater.checkInBackground(true);
+
         updater = new Updater(this);
         updater.check(false);  // автоматична перевірка оновлень (не частіше ніж раз на 6 год)
 
@@ -75,7 +81,7 @@ public class MainActivity extends Activity {
                 String path = uri.getPath();
                 if (path == null || path.equals("/") || path.isEmpty()) path = "/index.html";
                 try {
-                    InputStream in = getAssets().open("www" + path, AssetManager.ACCESS_STREAMING);
+                    InputStream in = webUpdater.open(path.substring(1));
                     return new WebResourceResponse(mimeType(path), "UTF-8", in);
                 } catch (IOException e) {
                     WebResourceResponse r = new WebResourceResponse("text/plain", "UTF-8", null);
@@ -110,14 +116,17 @@ public class MainActivity extends Activity {
 
         @JavascriptInterface
         public String getVersion() {
-            return Updater.currentVersion(MainActivity.this);
+            return Updater.currentVersion(MainActivity.this) + " · веб " + webUpdater.versionLabel();
         }
 
         @JavascriptInterface
         public void checkForUpdates() {
             runOnUiThread(new Runnable() {
                 @Override
-                public void run() { updater.check(true); }
+                public void run() {
+                    updater.check(true);
+                    webUpdater.checkInBackground(true);
+                }
             });
         }
     }
@@ -161,11 +170,20 @@ public class MainActivity extends Activity {
         Reminders.clearNotifications(this);
         webView.onResume();
         webView.resumeTimers();
+
+        // Повернулися після паузи — непомітно підхоплюємо завантажене оновлення гри
+        if (pausedAt > 0 && System.currentTimeMillis() - pausedAt > 5 * 60 * 1000L
+                && webUpdater.applyStaged()) {
+            webView.reload();
+        }
+        pausedAt = 0;
+        webUpdater.checkInBackground(false);
     }
 
     @Override
     protected void onPause() {
         Reminders.appVisible = false;
+        pausedAt = System.currentTimeMillis();
         webView.onPause();
         webView.pauseTimers();
         super.onPause();
