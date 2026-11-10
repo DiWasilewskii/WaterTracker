@@ -466,6 +466,13 @@ btnUpdateProfile.addEventListener('click', () => {
 
 btnRestart.addEventListener('click', restartGame);
 
+// Версія та кнопка оновлення — лише в застосунку Android
+if (window.AndroidBridge && AndroidBridge.checkForUpdates) {
+    try { $('app-version').textContent = AndroidBridge.getVersion(); } catch (e) { /* ignore */ }
+    $('app-update').classList.remove('hidden');
+    $('btn-check-update').addEventListener('click', () => AndroidBridge.checkForUpdates());
+}
+
 btnSimulateDay.addEventListener('click', () => {
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);

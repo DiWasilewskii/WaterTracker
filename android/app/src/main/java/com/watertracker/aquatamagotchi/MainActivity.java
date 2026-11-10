@@ -31,6 +31,7 @@ public class MainActivity extends Activity {
     private static final String START_URL = "https://" + HOST + "/index.html";
 
     private WebView webView;
+    private Updater updater;
 
     @SuppressLint("SetJavaScriptEnabled")
     @Override
@@ -54,6 +55,9 @@ public class MainActivity extends Activity {
 
         // Міст для гри: передає час наступного пиття в нативні нагадування
         webView.addJavascriptInterface(new ReminderBridge(), "AndroidBridge");
+
+        updater = new Updater(this);
+        updater.check(false);  // автоматична перевірка оновлень (не частіше ніж раз на 6 год)
 
         Reminders.ensureChannel(this);
         if (Build.VERSION.SDK_INT >= 33
@@ -103,6 +107,19 @@ public class MainActivity extends Activity {
         public void sync(double nextDrinkAt, int intervalSec, boolean isDead, boolean goalMet) {
             Reminders.sync(getApplicationContext(), (long) nextDrinkAt, intervalSec, isDead, goalMet);
         }
+
+        @JavascriptInterface
+        public String getVersion() {
+            return Updater.currentVersion(MainActivity.this);
+        }
+
+        @JavascriptInterface
+        public void checkForUpdates() {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() { updater.check(true); }
+            });
+        }
     }
 
     private static String mimeType(String path) {
@@ -142,6 +159,7 @@ public class MainActivity extends Activity {
         super.onResume();
         Reminders.appVisible = true;
         Reminders.clearNotifications(this);
+        updater.onResume();
         webView.onResume();
         webView.resumeTimers();
     }
@@ -156,6 +174,7 @@ public class MainActivity extends Activity {
 
     @Override
     protected void onDestroy() {
+        if (updater != null) updater.destroy();
         if (webView != null) webView.destroy();
         super.onDestroy();
     }
