@@ -115,6 +115,21 @@ function saveState() {
     try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(gameState));
     } catch (e) { /* сховище недоступне — граємо без збереження */ }
+    syncReminders();
+}
+
+// Передає розклад нагадувань у застосунок Android (у браузері нічого не робить).
+// Сповіщення плануються системою і приходять, навіть коли застосунок закритий.
+let lastReminderKey = '';
+function syncReminders() {
+    if (!window.AndroidBridge) return;
+    const goalMet = gameState.waterDrunk >= gameState.calculatedGoal;
+    const key = [gameState.nextDrinkAt, getIntervalSeconds(), gameState.isDead, goalMet].join('|');
+    if (key === lastReminderKey) return;
+    lastReminderKey = key;
+    try {
+        window.AndroidBridge.sync(gameState.nextDrinkAt, getIntervalSeconds(), gameState.isDead, goalMet);
+    } catch (e) { /* міст недоступний */ }
 }
 
 // ==========================================
@@ -141,6 +156,7 @@ function initGame() {
     if (typeof applyCachedWeather === 'function') applyCachedWeather();
 
     checkNewDay();
+    syncReminders();
     safeFetchWeather(false);
     startTimer();
     updateUI();

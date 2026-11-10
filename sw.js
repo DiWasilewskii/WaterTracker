@@ -1,5 +1,5 @@
-// Офлайн-кеш для веб-версії: статичні файли — з кешу, API погоди — завжди з мережі
-const CACHE = 'aqua-tamagotchi-v1';
+// Офлайн-кеш для веб-версії: файли гри — з мережі з резервом у кеші, API погоди не кешується
+const CACHE = 'aqua-tamagotchi-v2';
 const ASSETS = [
     './',
     'index.html',
@@ -31,16 +31,13 @@ self.addEventListener('activate', (e) => {
 self.addEventListener('fetch', (e) => {
     const url = new URL(e.request.url);
     if (e.request.method !== 'GET' || url.origin !== location.origin) return;
-    // stale-while-revalidate
+    // network-first: онлайн завжди свіжа версія, офлайн — з кешу
     e.respondWith(
         caches.open(CACHE).then(cache =>
-            cache.match(e.request).then(cached => {
-                const network = fetch(e.request).then(res => {
-                    if (res.ok) cache.put(e.request, res.clone());
-                    return res;
-                }).catch(() => cached);
-                return cached || network;
-            })
+            fetch(e.request).then(res => {
+                if (res.ok) cache.put(e.request, res.clone());
+                return res;
+            }).catch(() => cache.match(e.request))
         )
     );
 });

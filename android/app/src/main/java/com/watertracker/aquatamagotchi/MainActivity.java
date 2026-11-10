@@ -1,11 +1,15 @@
 package com.watertracker.aquatamagotchi;
 
+import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.content.res.AssetManager;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
+import android.webkit.JavascriptInterface;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceRequest;
@@ -48,6 +52,15 @@ public class MainActivity extends Activity {
         s.setMediaPlaybackRequiresUserGesture(true);
         s.setTextZoom(100);
 
+        // Міст для гри: передає час наступного пиття в нативні нагадування
+        webView.addJavascriptInterface(new ReminderBridge(), "AndroidBridge");
+
+        Reminders.ensureChannel(this);
+        if (Build.VERSION.SDK_INT >= 33
+                && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, 1);
+        }
+
         // Потрібен для alert()/prompt() у грі
         webView.setWebChromeClient(new WebChromeClient());
         webView.setWebViewClient(new WebViewClient() {
@@ -81,6 +94,14 @@ public class MainActivity extends Activity {
             webView.restoreState(savedInstanceState);
         } else {
             webView.loadUrl(START_URL);
+        }
+    }
+
+    /** Методи, доступні з JavaScript як window.AndroidBridge.* */
+    private class ReminderBridge {
+        @JavascriptInterface
+        public void sync(double nextDrinkAt, int intervalSec, boolean isDead, boolean goalMet) {
+            Reminders.sync(getApplicationContext(), (long) nextDrinkAt, intervalSec, isDead, goalMet);
         }
     }
 
@@ -119,12 +140,15 @@ public class MainActivity extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
+        Reminders.appVisible = true;
+        Reminders.clearNotifications(this);
         webView.onResume();
         webView.resumeTimers();
     }
 
     @Override
     protected void onPause() {
+        Reminders.appVisible = false;
         webView.onPause();
         webView.pauseTimers();
         super.onPause();
