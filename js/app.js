@@ -64,7 +64,6 @@ const countdownTimer = $('countdown-timer');
 
 // Кнопки
 const btnRestart = $('btn-restart');
-const btnSimulateDay = $('btn-simulate-day');
 
 // Модальне вікно налаштувань
 const settingsModal = $('settings-modal');
@@ -472,15 +471,6 @@ if (window.AndroidBridge && AndroidBridge.checkForUpdates) {
     $('app-update').classList.remove('hidden');
     $('btn-check-update').addEventListener('click', () => AndroidBridge.checkForUpdates());
 }
-
-btnSimulateDay.addEventListener('click', () => {
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
-    gameState.lastCheckedDate = yesterday.toDateString();
-    checkNewDay();
-    saveState();
-    updateUI();
-});
 
 // Зупиняємо таймер, коли застосунок у фоні (економія батареї),
 // і одразу перераховуємо все при поверненні

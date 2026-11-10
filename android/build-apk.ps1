@@ -6,8 +6,8 @@
 #   - Android build-tools 34 і платформу android-34 (dl.google.com)
 param(
     [string]$Tools = (Join-Path $env:LOCALAPPDATA "WaterTrackerAndroidTools"),
-    [string]$VersionName = "1.2.1",
-    [int]$VersionCode = 4
+    [string]$VersionName = "1.3",
+    [int]$VersionCode = 5
 )
 $ErrorActionPreference = "Stop"
 $ProgressPreference = "SilentlyContinue"

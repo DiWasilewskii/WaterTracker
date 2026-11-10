@@ -9,13 +9,9 @@ body {
     background-color: #1c2e3d; /* Базовий колір до завантаження погоди */
     color: #e1e1e6;
     font-family: 'Comic Sans MS', 'Chalkboard SE', 'Comic Neue', sans-serif;
-    display: flex;
-    justify-content: center;
-    align-items: center;
     min-height: 100vh;
     min-height: 100dvh;
     margin: 0;
-    padding: max(16px, env(safe-area-inset-top)) 12px max(16px, env(safe-area-inset-bottom));
     -webkit-tap-highlight-color: transparent;
     -webkit-user-select: none;
     user-select: none;
@@ -25,15 +21,18 @@ body {
 button, select, input { touch-action: manipulation; }
 input { -webkit-user-select: text; user-select: text; }
 
+/* Весь екран: верхня панель, екран тамагочі (займає все вільне місце), шкали */
 .game-container {
-    background-color: rgba(32, 32, 36, 0.92);
-    border: 4px solid #484848;
-    border-radius: 16px;
-    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
     width: 100%;
-    max-width: 400px;
+    max-width: 600px;
+    min-height: 100vh;
+    min-height: 100dvh;
+    margin: 0 auto;
+    padding: max(12px, env(safe-area-inset-top)) 12px max(12px, env(safe-area-inset-bottom));
     text-align: center;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.6);
 }
 
 /* Верхня панель */
@@ -41,7 +40,6 @@ input { -webkit-user-select: text; user-select: text; }
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 15px;
 }
 
 .btn-icon {
@@ -76,9 +74,13 @@ input { -webkit-user-select: text; user-select: text; }
     background-color: #09090a;
     border: 2px solid #323238;
     border-radius: 8px;
-    padding: 20px;
-    margin-bottom: 20px;
-    min-height: 160px;
+    padding: 56px 20px 80px;
+    flex: 1;
+    min-height: 260px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
     position: relative;
     overflow: hidden;
     transition: background 0.8s ease, border-color 0.8s ease, color 0.5s ease;
@@ -189,7 +191,7 @@ input { -webkit-user-select: text; user-select: text; }
    3. ПЕРСОНАЖ ТА ТАЙМЕР
    ========================================== */
 .pet {
-    height: 74px;
+    height: clamp(74px, 22vh, 180px);
     width: auto;
     margin: 8px 0;
     position: relative;
@@ -256,31 +258,44 @@ input { -webkit-user-select: text; user-select: text; }
     color: #263238;
 }
 
+/* Хмара — смуга на всю ширину екрана, видима частина намальована ::before.
+   Так translateX у відсотках проходить увесь екран будь-якої ширини (лише GPU). */
 .cloud {
     position: absolute;
+    left: 0;
+    width: 100%;
+    animation: float-clouds linear infinite;
+}
+
+.cloud::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    width: var(--w);
+    height: var(--h);
     background: rgba(255, 255, 255, 0.55);
     border-radius: 20px;
-    animation: float-clouds linear infinite;
+    transform: translateX(-100%);
 }
 
 .cloud-1 {
     top: 15%;
-    width: 70px;
-    height: 24px;
+    --w: 70px;
+    --h: 24px;
     animation-duration: 18s;
 }
 
 .cloud-2 {
     top: 35%;
-    width: 100px;
-    height: 30px;
+    --w: 100px;
+    --h: 30px;
     animation-duration: 25s;
     animation-delay: -7s;
 }
 
 @keyframes float-clouds {
-    0% { transform: translateX(-110px); }
-    100% { transform: translateX(350px); }
+    0% { transform: translateX(0); }
+    100% { transform: translateX(calc(100% + 110px)); }
 }
 
 /* 🌧️ Дощ */
@@ -289,19 +304,21 @@ input { -webkit-user-select: text; user-select: text; }
     color: #ffffff;
 }
 
+/* Краплі й сніжинки — стовпчики на всю висоту екрана з частинкою вгорі,
+   тож translateY(100%) проходить екран будь-якої висоти */
 .rain-drop {
     position: absolute;
-    top: -15px;
+    top: 0;
     width: 2px;
-    height: 14px;
-    background: rgba(255, 255, 255, 0.6);
+    height: 100%;
+    background: linear-gradient(rgba(255, 255, 255, 0.6) 14px, transparent 14px);
     opacity: 0.8;
     animation: fall-rain linear infinite;
 }
 
 @keyframes fall-rain {
-    0% { transform: translateY(0); }
-    100% { transform: translateY(280px); }
+    0% { transform: translateY(-15px); }
+    100% { transform: translateY(100%); }
 }
 
 /* ❄️ Сніг */
@@ -312,19 +329,18 @@ input { -webkit-user-select: text; user-select: text; }
 
 .snowflake {
     position: absolute;
-    top: -10px;
+    top: 0;
     width: 6px;
-    height: 6px;
-    background: #ffffff;
-    border-radius: 50%;
+    height: 100%;
+    background: radial-gradient(circle at 3px 3px, #ffffff 3px, transparent 3.5px) no-repeat;
     opacity: 0.9;
     animation: fall-snow linear infinite;
 }
 
 @keyframes fall-snow {
-    0% { transform: translateY(0) translateX(0); }
-    50% { transform: translateY(130px) translateX(10px); }
-    100% { transform: translateY(280px) translateX(-10px); }
+    0% { transform: translateY(-10px) translateX(0); }
+    50% { transform: translateY(50%) translateX(10px); }
+    100% { transform: translateY(100%) translateX(-10px); }
 }
 
 /* 🌩️ Гроза */
@@ -375,7 +391,6 @@ input { -webkit-user-select: text; user-select: text; }
     display: flex;
     flex-direction: column;
     gap: 15px;
-    margin: 20px 0;
     background: #1e1e24;
     padding: 15px;
     border-radius: 10px;
@@ -470,8 +485,6 @@ input { -webkit-user-select: text; user-select: text; }
 .btn-danger { background-color: #f75a68; color: white; }
 .hidden { display: none !important; }
 
-.dev-panel { margin-top: 20px; border-top: 1px dashed #323238; padding-top: 10px; }
-.btn-dev { background: transparent; border: 1px solid #7c7c8a; color: #7c7c8a; font-size: 11px; padding: 5px 10px; cursor: pointer; font-family: inherit; }
 
 /* ==========================================
    7. МОДАЛЬНІ ВІКНА
@@ -670,3 +683,6 @@ input { -webkit-user-select: text; user-select: text; }
     cursor: pointer;
     text-decoration: underline;
 }
+
+/* Порожня панель (кнопка «Новий улюбленець» схована) не займає місця */
+.controls-bar:has(> .hidden:only-child) { display: none; }
