@@ -5,7 +5,17 @@ const DRINK_EFFICIENCY = {
     soda: 0.4
 };
 
-let gameState = {
+const STORAGE_KEY = 'tamagotchi_water_state_v4';
+const WEATHER_TTL_MS = 30 * 60 * 1000; // погоду оновлюємо не частіше ніж раз на 30 хв
+
+const SPRITES = {
+    alive: 'img/charachter/regular_water.png',
+    drinking: 'img/charachter/drink_water.png',
+    sick: 'img/charachter/sick_water.png',
+    dead: 'img/charachter/death_water.png'
+};
+
+const DEFAULT_STATE = {
     waterDrunk: 0,
     totalVolume: 0,
     daysSurvived: 0,
@@ -14,100 +24,141 @@ let gameState = {
     chosenInterval: 3600,
     isCustomInterval: false,  // Чи увімкнено кастомний інтервал
     customMinutes: 60,        // Значення кастомного інтервалу
-    secondsLeft: 3600,
+    nextDrinkAt: 0,           // Мітка часу (мс), коли треба пити наступного разу
     weight: 60,
     height: 170,
     age: 25,
     gender: 'male',
     city: 'Київ',
     calculatedGoal: 2000,
-    currentTemp: 20
+    currentTemp: 20,
+    weatherCode: null,
+    weatherFetchedAt: 0
 };
+
+let gameState = { ...DEFAULT_STATE };
 
 let timerIntervalId = null;
 let isAnimatingDrink = false;
+let lastRenderedTimer = '';
+let lastPetMode = '';
+
+const $ = (id) => document.getElementById(id);
 
 // DOM елементи вибору напою (у модальному вікні)
-const selectDrink = document.getElementById('select-drink');
-const inputCustomVolume = document.getElementById('input-custom-volume');
+const selectDrink = $('select-drink');
+const inputCustomVolume = $('input-custom-volume');
 
 // Лічильники та шкали
-const waterCount = document.getElementById('water-count');
-const waterGoal = document.getElementById('water-goal');
-const totalVolumeCount = document.getElementById('total-volume');
-const daysCount = document.getElementById('days-count');
-const progressFill = document.getElementById('progress-fill');
-const totalVolumeFill = document.getElementById('total-volume-fill'); // Червона шкала
+const waterCount = $('water-count');
+const waterGoal = $('water-goal');
+const totalVolumeCount = $('total-volume');
+const daysCount = $('days-count');
+const progressFill = $('progress-fill');
+const totalVolumeFill = $('total-volume-fill'); // Червона шкала
 
 // Екран персонажа
-const petAvatar = document.getElementById('pet-avatar');
-const petStatus = document.getElementById('pet-status');
-const countdownTimer = document.getElementById('countdown-timer');
+const petAvatar = $('pet-avatar');
+const petStatus = $('pet-status');
+const countdownTimer = $('countdown-timer');
 
 // Кнопки
-const btnRestart = document.getElementById('btn-restart');
-const btnSimulateDay = document.getElementById('btn-simulate-day');
+const btnRestart = $('btn-restart');
+const btnSimulateDay = $('btn-simulate-day');
 
 // Модальне вікно налаштувань
-const settingsModal = document.getElementById('settings-modal');
-const btnOpenSettings = document.getElementById('btn-open-settings');
-const btnCloseSettings = document.getElementById('btn-close-settings');
-const btnUpdateProfile = document.getElementById('btn-update-profile');
+const settingsModal = $('settings-modal');
+const btnOpenSettings = $('btn-open-settings');
+const btnCloseSettings = $('btn-close-settings');
+const btnUpdateProfile = $('btn-update-profile');
 
 // Поля вводу налаштувань
-const inputWeight = document.getElementById('input-weight');
-const inputHeight = document.getElementById('input-height');
-const inputAge = document.getElementById('input-age');
-const inputGender = document.getElementById('input-gender');
-const inputCity = document.getElementById('input-city');
-const intervalSelect = document.getElementById('interval-select'); // Явне оголошення
-const inputCustomMinutes = document.getElementById('input-custom-minutes');
-const customIntervalWrapper = document.getElementById('custom-interval-wrapper');
+const inputWeight = $('input-weight');
+const inputHeight = $('input-height');
+const inputAge = $('input-age');
+const inputGender = $('input-gender');
+const inputCity = $('input-city');
+const intervalSelect = $('interval-select');
+const inputCustomMinutes = $('input-custom-minutes');
+const customIntervalWrapper = $('custom-interval-wrapper');
 
 // Модальне вікно напою
-const drinkModal = document.getElementById('drink-modal');
-const btnOpenDrinkModal = document.getElementById('btn-open-drink-modal');
-const btnCloseDrink = document.getElementById('btn-close-drink');
-const btnDrinkConfirm = document.getElementById('btn-drink-confirm');
+const drinkModal = $('drink-modal');
+const btnOpenDrinkModal = $('btn-open-drink-modal');
+const btnCloseDrink = $('btn-close-drink');
+const btnDrinkConfirm = $('btn-drink-confirm');
 
 const petIntervalWrapper = document.querySelector('.pet-interval-wrapper');
 
 
-function initGame() {
-    const savedState = localStorage.getItem('tamagotchi_water_state_v4');
-    if (savedState) {
-        gameState = JSON.parse(savedState);
-        
-        if (inputWeight) inputWeight.value = gameState.weight;
-        if (inputHeight) inputHeight.value = gameState.height;
-        if (inputAge) inputAge.value = gameState.age;
-        if (inputGender) inputGender.value = gameState.gender;
-        if (inputCity) inputCity.value = gameState.city;
-        if (inputCustomMinutes) inputCustomMinutes.value = gameState.customMinutes || 60;
-        
-        if (intervalSelect) {
-            if (gameState.isCustomInterval) {
-                intervalSelect.value = 'custom';
-                if (customIntervalWrapper) customIntervalWrapper.classList.remove('hidden');
-            } else {
-                intervalSelect.value = gameState.chosenInterval;
-                if (customIntervalWrapper) customIntervalWrapper.classList.add('hidden');
-            }
+// ==========================================
+// ЗБЕРЕЖЕННЯ
+// ==========================================
+function loadState() {
+    try {
+        const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
+        if (!saved) return false;
+        gameState = { ...DEFAULT_STATE, ...saved };
+        // Міграція зі старого формату (secondsLeft зберігався кожну секунду)
+        if (!gameState.nextDrinkAt) {
+            const left = typeof saved.secondsLeft === 'number' ? saved.secondsLeft : getIntervalSeconds();
+            gameState.nextDrinkAt = Date.now() + left * 1000;
         }
+        delete gameState.secondsLeft;
+        return true;
+    } catch (e) {
+        return false;
+    }
+}
+
+function saveState() {
+    try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(gameState));
+    } catch (e) { /* сховище недоступне — граємо без збереження */ }
+}
+
+// ==========================================
+// ІГРОВА ЛОГІКА
+// ==========================================
+function initGame() {
+    // Попереднє завантаження спрайтів, щоб не було блимання при зміні стану
+    Object.values(SPRITES).forEach(src => { new Image().src = src; });
+
+    if (loadState()) {
+        inputWeight.value = gameState.weight;
+        inputHeight.value = gameState.height;
+        inputAge.value = gameState.age;
+        inputGender.value = gameState.gender;
+        inputCity.value = gameState.city;
+        inputCustomMinutes.value = gameState.customMinutes || 60;
+        syncIntervalSelect();
     } else {
-        gameState.secondsLeft = gameState.chosenInterval;
+        resetTimer();
         recalculateWaterGoal();
     }
-    
+
+    // Миттєво показуємо збережену погоду, не чекаючи мережі
+    if (typeof applyCachedWeather === 'function') applyCachedWeather();
+
     checkNewDay();
-    safeFetchWeather();
+    safeFetchWeather(false);
     startTimer();
     updateUI();
 }
 
-function safeFetchWeather() {
+function syncIntervalSelect() {
+    if (gameState.isCustomInterval) {
+        intervalSelect.value = 'custom';
+        customIntervalWrapper.classList.remove('hidden');
+    } else {
+        intervalSelect.value = gameState.chosenInterval;
+        customIntervalWrapper.classList.add('hidden');
+    }
+}
+
+function safeFetchWeather(force) {
     if (typeof fetchWeatherAndRecalculate === 'function') {
-        fetchWeatherAndRecalculate();
+        fetchWeatherAndRecalculate(force);
     } else {
         recalculateWaterGoal();
     }
@@ -118,13 +169,12 @@ function recalculateWaterGoal() {
     if (gameState.age < 30) baseVolume += 150;
     if (gameState.age > 55) baseVolume -= 200;
     if (gameState.height > 180) baseVolume += 200;
-    
+
     if (gameState.currentTemp >= 30) baseVolume += 750;
     else if (gameState.currentTemp >= 25) baseVolume += 500;
     else if (gameState.currentTemp <= 5) baseVolume -= 150;
-    
-    gameState.calculatedGoal = Math.round(baseVolume / 50) * 50;
-    if (gameState.calculatedGoal < 1000) gameState.calculatedGoal = 1000;
+
+    gameState.calculatedGoal = Math.max(1000, Math.round(baseVolume / 50) * 50);
     saveState();
     updateUI();
 }
@@ -142,70 +192,82 @@ function checkNewDay() {
             gameState.lastCheckedDate = todayStr;
             resetTimer();
         }
+        updateUI();
     }
+}
+
+function getIntervalSeconds() {
+    return gameState.isCustomInterval ? gameState.customMinutes * 60 : gameState.chosenInterval;
+}
+
+function getSecondsLeft() {
+    return Math.ceil((gameState.nextDrinkAt - Date.now()) / 1000);
+}
+
+function tick() {
+    if (gameState.isDead) { stopTimer(); return; }
+    checkNewDay();
+    renderTimer();
 }
 
 function startTimer() {
+    stopTimer();
+    if (gameState.isDead || document.hidden) return;
+    tick();
+    timerIntervalId = setInterval(tick, 1000);
+}
+
+function stopTimer() {
     if (timerIntervalId) clearInterval(timerIntervalId);
-    timerIntervalId = setInterval(() => {
-        if (gameState.isDead) { clearInterval(timerIntervalId); return; }
-        gameState.secondsLeft--;
-        saveState();
-        updateUI();
-    }, 1000);
+    timerIntervalId = null;
 }
 
 function resetTimer() {
-    if (gameState.isCustomInterval) {
-        gameState.secondsLeft = gameState.customMinutes * 60;
-    } else {
-        gameState.secondsLeft = gameState.chosenInterval;
-    }
+    gameState.nextDrinkAt = Date.now() + getIntervalSeconds() * 1000;
     saveState();
 }
 
 function drinkWater() {
-    if (gameState.isDead || isAnimatingDrink) return;
+    if (gameState.isDead || isAnimatingDrink) return false;
 
     const selectedDrinkType = selectDrink.value;
-    let inputVolValue = parseInt(inputCustomVolume.value);
-    
+    const inputVolValue = parseInt(inputCustomVolume.value, 10);
+
     if (isNaN(inputVolValue) || inputVolValue <= 0) {
         alert("Введіть коректну кількість мілілітрів!");
-        return;
+        return false;
     }
-    
+
     const efficiency = DRINK_EFFICIENCY[selectedDrinkType] || 1.0;
     const netHydration = Math.round(inputVolValue * efficiency);
-    
+
     gameState.waterDrunk += netHydration;
     gameState.totalVolume += inputVolValue;
-    
+
     resetTimer();
-    
+
     isAnimatingDrink = true;
-    petAvatar.src = "img/charachter/drink_water.svg";
-    petAvatar.className = "pet drinking";
-    
-    if (selectedDrinkType === 'water') {
-        petStatus.textContent = `Глип-глип! +${netHydration} мл чистого здоров'я!`;
-    } else if (selectedDrinkType === 'coffee') {
-        petStatus.textContent = `Кава! Залито ${inputVolValue} мл, користі на +${netHydration} мл!`;
-    } else if (selectedDrinkType === 'tea') {
-        petStatus.textContent = `Чайочок! Корисної рідини додано: +${netHydration} мл.`;
-    } else if (selectedDrinkType === 'soda') {
-        petStatus.textContent = `Цукрова бомба! Користі всього +${netHydration} мл!`;
-    }
+    setPetMode('drinking');
+
+    const messages = {
+        water: `Глип-глип! +${netHydration} мл чистого здоров'я!`,
+        coffee: `Кава! Залито ${inputVolValue} мл, користі на +${netHydration} мл!`,
+        tea: `Чайочок! Корисної рідини додано: +${netHydration} мл.`,
+        soda: `Цукрова бомба! Користі всього +${netHydration} мл!`
+    };
+    petStatus.textContent = messages[selectedDrinkType] || messages.water;
 
     setTimeout(() => {
         isAnimatingDrink = false;
         updateUI();
     }, 1500);
+    updateUI();
+    return true;
 }
 
 function triggerDeath() {
     gameState.isDead = true;
-    clearInterval(timerIntervalId);
+    stopTimer();
     saveState();
     updateUI();
 }
@@ -217,7 +279,7 @@ function restartGame() {
     gameState.daysSurvived = 0;
     gameState.lastCheckedDate = new Date().toDateString();
     resetTimer();
-    safeFetchWeather();
+    safeFetchWeather(false);
     startTimer();
     updateUI();
 }
@@ -232,134 +294,134 @@ function formatTime(seconds) {
     return isNegative ? `-${padded}` : padded;
 }
 
+// ==========================================
+// ВІДОБРАЖЕННЯ
+// ==========================================
+
+// Змінює спрайт і клас персонажа лише тоді, коли стан справді змінився
+function setPetMode(mode) {
+    if (lastPetMode === mode) return;
+    lastPetMode = mode;
+    petAvatar.src = SPRITES[mode];
+    petAvatar.className = `pet ${mode}`;
+}
+
+// Щосекундне оновлення: тільки текст таймера та перехід у стан "хворий"
+function renderTimer() {
+    const secondsLeft = getSecondsLeft();
+    const text = formatTime(secondsLeft);
+    if (text !== lastRenderedTimer) {
+        countdownTimer.textContent = text;
+        lastRenderedTimer = text;
+    }
+    const wantSick = secondsLeft < 0;
+    if (!isAnimatingDrink && !gameState.isDead && wantSick !== (lastPetMode === 'sick')) {
+        updateUI();
+    }
+}
+
 function updateUI() {
-    if (waterCount) waterCount.textContent = gameState.waterDrunk;
-    if (waterGoal) waterGoal.textContent = gameState.calculatedGoal;
-    if (totalVolumeCount) totalVolumeCount.textContent = gameState.totalVolume;
-    if (daysCount) daysCount.textContent = gameState.daysSurvived;
+    waterCount.textContent = gameState.waterDrunk;
+    waterGoal.textContent = gameState.calculatedGoal;
+    totalVolumeCount.textContent = gameState.totalVolume;
+    daysCount.textContent = gameState.daysSurvived;
 
-    // 1. Оновлення СИНЬОЇ шкали (Гідратація)
-    if (progressFill) {
-        const waterPercent = Math.min((gameState.waterDrunk / gameState.calculatedGoal) * 100, 100);
-        progressFill.style.width = `${waterPercent}%`;
-    }
+    // 1. СИНЯ шкала (Гідратація) — scaleX працює на GPU без перерахунку макета
+    const waterPercent = Math.min(gameState.waterDrunk / gameState.calculatedGoal, 1);
+    progressFill.style.transform = `scaleX(${waterPercent})`;
 
-    // 2. Оновлення ЧЕРВОНОЇ шкали (Загалом випито)
-    if (totalVolumeFill) {
-        const totalPercent = Math.min((gameState.totalVolume / gameState.calculatedGoal) * 100, 100);
-        totalVolumeFill.style.width = `${totalPercent}%`;
-    }
+    // 2. ЧЕРВОНА шкала (Загалом випито)
+    const totalPercent = Math.min(gameState.totalVolume / gameState.calculatedGoal, 1);
+    totalVolumeFill.style.transform = `scaleX(${totalPercent})`;
 
-    if (countdownTimer) {
-        countdownTimer.textContent = formatTime(gameState.secondsLeft);
-    }
+    const secondsLeft = getSecondsLeft();
+    lastRenderedTimer = formatTime(secondsLeft);
+    countdownTimer.textContent = lastRenderedTimer;
 
-    // Якщо зараз іде анімація пиття — не переписуємо статус і сплайт
-    if (isAnimatingDrink) return; 
+    // Якщо зараз іде анімація пиття — не переписуємо статус і спрайт
+    if (isAnimatingDrink) return;
 
-    // Обробка стану смерті / життя персонажа
-    if (gameState.isDead) {
-        petAvatar.src = "img/charachter/death_water.svg"; 
-        petAvatar.className = "pet dead";
+    const isDead = gameState.isDead;
+    countdownTimer.classList.toggle('hidden', isDead);
+    btnOpenDrinkModal.classList.toggle('hidden', isDead);
+    petIntervalWrapper.classList.toggle('hidden', isDead);
+    btnRestart.classList.toggle('hidden', !isDead);
+
+    if (isDead) {
+        setPetMode('dead');
         petStatus.textContent = `Помер від спраги на ${gameState.daysSurvived} день...`;
-        
-        if (countdownTimer) countdownTimer.style.display = 'none';
-        if (btnOpenDrinkModal) btnOpenDrinkModal.style.display = 'none';
-        if (petIntervalWrapper) petIntervalWrapper.style.display = 'none';
-        
-        btnRestart.classList.remove('hidden');
+    } else if (secondsLeft < 0) {
+        setPetMode('sick');
+        petStatus.textContent = "Мені зле! Швидше дай попити!";
+        countdownTimer.classList.add('overdue');
     } else {
-        if (btnOpenDrinkModal) btnOpenDrinkModal.style.display = 'flex';
-        if (petIntervalWrapper) petIntervalWrapper.style.display = 'block';
-        
-        btnRestart.classList.add('hidden');
-        if (countdownTimer) countdownTimer.style.display = 'block';
+        setPetMode('alive');
+        countdownTimer.classList.remove('overdue');
 
-        if (gameState.secondsLeft < 0) {
-            petAvatar.src = "img/charachter/sick_water.svg";
-            petAvatar.className = "pet sick";
-            petStatus.textContent = "Мені зле! Швидше дай попити!";
-            if (countdownTimer) countdownTimer.className = "countdown-timer overdue";
+        if (gameState.waterDrunk === 0) {
+            petStatus.textContent = `Ціль на сьогодні — ${gameState.calculatedGoal} мл корисного зволоження!`;
+        } else if (gameState.waterDrunk < gameState.calculatedGoal) {
+            petStatus.textContent = "Продовжуй у тому ж дусі, політ нормальний!";
         } else {
-            petAvatar.src = "img/charachter/regular_water.svg";
-            petAvatar.className = "pet alive";
-            if (countdownTimer) countdownTimer.className = "countdown-timer";
-
-            if (gameState.waterDrunk === 0) {
-                petStatus.textContent = `Ціль на сьогодні — ${gameState.calculatedGoal} мл корисного зволоження!`;
-            } else if (gameState.waterDrunk < gameState.calculatedGoal) {
-                petStatus.textContent = "Продовжуй у тому ж дусі, політ нормальний!";
-            } else {
-                petStatus.textContent = "Норму виконано! Я в повному порядку!";
-            }
+            petStatus.textContent = "Норму виконано! Я в повному порядку!";
         }
     }
 }
 
-function saveState() {
-    localStorage.setItem('tamagotchi_water_state_v4', JSON.stringify(gameState));
-}
+// ==========================================
+// ОБРОБНИКИ ПОДІЙ
+// ==========================================
 
 // Обробка зміни інтервалу безпосередньо з екрана тамагочі
-if (intervalSelect) {
-    intervalSelect.addEventListener('change', (e) => {
-        if (e.target.value === 'custom') {
-            const userInput = prompt("Введіть інтервал нагадування у хвилинах (наприклад: 45):", gameState.customMinutes || 60);
-            
-            if (userInput !== null && userInput.trim() !== "") {
-                let mins = parseInt(userInput);
-                if (!isNaN(mins) && mins > 0) {
-                    gameState.isCustomInterval = true;
-                    gameState.customMinutes = mins;
-                    resetTimer();
-                    saveState();
-                } else {
-                    alert("Будь ласка, введіть коректне число більше 0.");
-                    intervalSelect.value = gameState.isCustomInterval ? 'custom' : gameState.chosenInterval;
-                }
-            } else {
-                intervalSelect.value = gameState.isCustomInterval ? 'custom' : gameState.chosenInterval;
-            }
-        } else {
-            gameState.isCustomInterval = false;
-            gameState.chosenInterval = parseInt(e.target.value);
+intervalSelect.addEventListener('change', (e) => {
+    if (e.target.value === 'custom') {
+        const userInput = prompt("Введіть інтервал нагадування у хвилинах (наприклад: 45):", gameState.customMinutes || 60);
+        const mins = userInput === null ? NaN : parseInt(userInput, 10);
+
+        if (!isNaN(mins) && mins > 0) {
+            gameState.isCustomInterval = true;
+            gameState.customMinutes = mins;
+            inputCustomMinutes.value = mins;
             resetTimer();
-            saveState();
+        } else if (userInput !== null && userInput.trim() !== "") {
+            alert("Будь ласка, введіть коректне число більше 0.");
         }
-    });
-}
-
-// Керування модалкою налаштувань
-btnOpenSettings.addEventListener('click', () => {
-    settingsModal.classList.remove('hidden');
+    } else {
+        gameState.isCustomInterval = false;
+        gameState.chosenInterval = parseInt(e.target.value, 10);
+        resetTimer();
+    }
+    syncIntervalSelect();
+    updateUI();
 });
 
-btnCloseSettings.addEventListener('click', () => {
-    settingsModal.classList.add('hidden');
-});
+function openModal(modal) { modal.classList.remove('hidden'); }
+function closeModal(modal) { modal.classList.add('hidden'); }
 
-// Керування модалкою напою
+btnOpenSettings.addEventListener('click', () => openModal(settingsModal));
+btnCloseSettings.addEventListener('click', () => closeModal(settingsModal));
+
 btnOpenDrinkModal.addEventListener('click', () => {
-    if (gameState.isDead) return;
-    drinkModal.classList.remove('hidden');
+    if (!gameState.isDead) openModal(drinkModal);
 });
-
-btnCloseDrink.addEventListener('click', () => {
-    drinkModal.classList.add('hidden');
-});
+btnCloseDrink.addEventListener('click', () => closeModal(drinkModal));
 
 btnDrinkConfirm.addEventListener('click', () => {
-    drinkWater();
-    drinkModal.classList.add('hidden');
+    if (drinkWater()) closeModal(drinkModal);
 });
 
-// Закриття будь-якого модального вікна при кліку на темний фон навколо
-window.addEventListener('click', (e) => {
-    if (e.target === settingsModal) {
-        settingsModal.classList.add('hidden');
-    }
-    if (e.target === drinkModal) {
-        drinkModal.classList.add('hidden');
+// Закриття будь-якого модального вікна при натисканні на темний фон навколо
+[settingsModal, drinkModal].forEach(modal => {
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) closeModal(modal);
+    });
+});
+
+// Кнопка "Назад" на Android / Escape — закриває відкрите вікно
+window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        closeModal(settingsModal);
+        closeModal(drinkModal);
     }
 });
 
@@ -367,33 +429,59 @@ window.addEventListener('click', (e) => {
 btnUpdateProfile.addEventListener('click', () => {
     gameState.weight = parseFloat(inputWeight.value) || 60;
     gameState.height = parseFloat(inputHeight.value) || 170;
-    gameState.age = parseInt(inputAge.value) || 25;
+    gameState.age = parseInt(inputAge.value, 10) || 25;
     gameState.gender = inputGender.value;
     gameState.city = inputCity.value.trim() || "Київ";
-    
+
     if (intervalSelect.value === 'custom') {
         gameState.isCustomInterval = true;
-        let mins = parseInt(inputCustomMinutes.value);
+        let mins = parseInt(inputCustomMinutes.value, 10);
         if (isNaN(mins) || mins <= 0) mins = 60;
         gameState.customMinutes = mins;
     } else {
         gameState.isCustomInterval = false;
-        gameState.chosenInterval = parseInt(intervalSelect.value);
+        gameState.chosenInterval = parseInt(intervalSelect.value, 10);
     }
-    
+
     resetTimer();
-    safeFetchWeather();
-    settingsModal.classList.add('hidden');
+    safeFetchWeather(true);
+    closeModal(settingsModal);
 });
 
 btnRestart.addEventListener('click', restartGame);
 
 btnSimulateDay.addEventListener('click', () => {
-    let yesterday = new Date();
+    const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
     gameState.lastCheckedDate = yesterday.toDateString();
     checkNewDay();
+    saveState();
     updateUI();
 });
 
-window.onload = initGame;
+// Зупиняємо таймер, коли застосунок у фоні (економія батареї),
+// і одразу перераховуємо все при поверненні
+document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+        stopTimer();
+        saveState();
+    } else {
+        checkNewDay();
+        startTimer();
+        updateUI();
+        safeFetchWeather(false);
+    }
+});
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initGame);
+} else {
+    initGame();
+}
+
+// Офлайн-кеш для веб-версії (у APK не потрібен — файли вже всередині)
+if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js').catch(() => {});
+    });
+}

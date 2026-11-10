@@ -1,6 +1,10 @@
 /* ==========================================
    1. ЗАГАЛЬНІ СТИЛІ ТА КОНТЕЙНЕР
    ========================================== */
+*, *::before, *::after { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
 body {
     background-color: #1c2e3d; /* Базовий колір до завантаження погоди */
     color: #e1e1e6;
@@ -9,20 +13,27 @@ body {
     justify-content: center;
     align-items: center;
     min-height: 100vh;
+    min-height: 100dvh;
     margin: 0;
-    padding: 20px 0;
-    transition: background 1s ease;
+    padding: max(16px, env(safe-area-inset-top)) 12px max(16px, env(safe-area-inset-bottom));
+    -webkit-tap-highlight-color: transparent;
+    -webkit-user-select: none;
+    user-select: none;
+    overscroll-behavior: none;
 }
+
+button, select, input { touch-action: manipulation; }
+input { -webkit-user-select: text; user-select: text; }
 
 .game-container {
     background-color: rgba(32, 32, 36, 0.92);
     border: 4px solid #484848;
     border-radius: 16px;
     padding: 24px;
-    width: 360px;
+    width: 100%;
+    max-width: 400px;
     text-align: center;
     box-shadow: 0 10px 30px rgba(0,0,0,0.6);
-    backdrop-filter: blur(5px);
 }
 
 /* Верхня панель */
@@ -96,7 +107,7 @@ body {
     font-size: 13px;
     font-weight: bold;
     color: #ffcc00;
-    backdrop-filter: blur(4px);
+
     z-index: 5;
 }
 
@@ -119,7 +130,7 @@ body {
     font-family: inherit;
     cursor: pointer;
     outline: none;
-    backdrop-filter: blur(4px);
+
     box-shadow: 0 4px 12px rgba(0, 136, 255, 0.25);
     transition: transform 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
 }
@@ -151,14 +162,15 @@ body {
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    backdrop-filter: blur(4px);
+
     box-shadow: 0 4px 12px rgba(0, 136, 255, 0.3);
     transition: transform 0.2s, background 0.2s, box-shadow 0.2s;
     z-index: 10;
 }
 
 .btn-glass img {
-    height: 48px;
+    height: 37px;
+    width: auto;
     object-fit: contain;
     filter: drop-shadow(0px 2px 4px rgba(0, 136, 255, 0.4));
 }
@@ -177,8 +189,9 @@ body {
    3. ПЕРСОНАЖ ТА ТАЙМЕР
    ========================================== */
 .pet {
-    height: 90px;
+    height: 74px;
     width: auto;
+    margin: 8px 0;
     position: relative;
     z-index: 2; /* Поверх погоди */
     transition: transform 0.3s ease, filter 0.3s ease;
@@ -394,8 +407,10 @@ body {
 
 .progress-fill-inner {
     height: 100%;
-    width: 0%;
-    transition: width 0.5s ease;
+    width: 100%;
+    transform: scaleX(0);
+    transform-origin: left center;
+    transition: transform 0.5s ease;
 }
 
 .blue-bar .progress-fill-inner {
@@ -479,12 +494,20 @@ body {
     border: 3px solid #484848;
     border-radius: 12px;
     padding: 20px;
-    width: 320px;
+    width: calc(100% - 32px);
+    max-width: 360px;
+    max-height: calc(100dvh - 32px);
+    overflow-y: auto;
     position: relative;
     text-align: left;
 }
 
 .close-modal {
+    background: none;
+    border: none;
+    padding: 0 4px;
+    line-height: 1;
+    font-family: inherit;
     position: absolute;
     right: 15px;
     top: 10px;
@@ -598,4 +621,29 @@ body {
     0% { transform: scale(1) translateY(0); }
     50% { transform: scale(1.15) translateY(-4px) rotate(-5deg); }
     100% { transform: scale(1) translateY(0); }
+}
+
+/* ==========================================
+   9. МОБІЛЬНІ ОПТИМІЗАЦІЇ
+   ========================================== */
+/* Анімовані частинки погоди — тільки transform/opacity (GPU) */
+.rain-drop, .snowflake, .cloud, .sun-ray { will-change: transform; }
+
+/* Поля вводу ≥16px, щоб браузер не масштабував сторінку при фокусі */
+.settings-grid input, .settings-grid select, #input-custom-minutes,
+.weather-setting input, .input-control { font-size: 16px; }
+
+@media (max-width: 380px) {
+    .game-container { padding: 16px; }
+    .btn-icon, .weather-widget { font-size: 12px; padding: 6px 8px; }
+}
+
+/* Повага до системного налаштування "зменшити рух" */
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+    .weather-overlay { display: none; }
 }
