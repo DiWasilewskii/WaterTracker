@@ -159,7 +159,6 @@ public class MainActivity extends Activity {
         super.onResume();
         Reminders.appVisible = true;
         Reminders.clearNotifications(this);
-        updater.onResume();
         webView.onResume();
         webView.resumeTimers();
     }
@@ -174,7 +173,6 @@ public class MainActivity extends Activity {
 
     @Override
     protected void onDestroy() {
-        if (updater != null) updater.destroy();
         if (webView != null) webView.destroy();
         super.onDestroy();
     }
