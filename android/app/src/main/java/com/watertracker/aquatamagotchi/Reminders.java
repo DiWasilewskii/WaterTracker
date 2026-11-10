@@ -8,6 +8,8 @@ import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.media.AudioAttributes;
+import android.media.RingtoneManager;
 import android.os.Build;
 
 import java.util.Calendar;
@@ -20,13 +22,18 @@ import java.util.Calendar;
 final class Reminders {
     static final String ACTION_DRINK = "com.watertracker.aquatamagotchi.DRINK_REMINDER";
     static final String ACTION_EVENING = "com.watertracker.aquatamagotchi.EVENING_REMINDER";
+    static final String ACTION_TEST = "com.watertracker.aquatamagotchi.TEST_REMINDER";
 
-    private static final String CHANNEL_ID = "drink_reminders";
+    // v2: канал із показом на заблокованому екрані (налаштування старого каналу змінити не можна)
+    private static final String CHANNEL_ID = "drink_reminders_v2";
+    private static final String OLD_CHANNEL_ID = "drink_reminders";
     private static final String PREFS = "reminders";
     private static final int NOTIF_DRINK = 1;
     private static final int NOTIF_EVENING = 2;
+    private static final int NOTIF_TEST = 3;
 
     private static final long MIN_REPEAT_MS = 15 * 60 * 1000L;  // повтори не частіше ніж раз на 15 хв
+    private static final long TEST_DELAY_MS = 15 * 1000L;       // тестове сповіщення — через 15 с
     private static final int EVENING_HOUR = 21;                 // вечірнє попередження, якщо норму не виконано
 
     /** true, коли гра відкрита на екрані — тоді сповіщення не потрібні. */
@@ -67,9 +74,20 @@ final class Reminders {
         else cancel(ctx, ACTION_EVENING);
     }
 
+    /** Тестове сповіщення тим самим шляхом, що й справжні (через AlarmManager). */
+    static void scheduleTest(Context ctx) {
+        schedule(ctx, ACTION_TEST, System.currentTimeMillis() + TEST_DELAY_MS);
+    }
+
     /** Викликається з ReminderReceiver, коли спрацював будильник. */
     static void onAlarm(Context ctx, String action) {
         SharedPreferences p = prefs(ctx);
+
+        if (ACTION_TEST.equals(action)) {
+            show(ctx, NOTIF_TEST, "🔔 Тестове сповіщення",
+                "Сповіщення працюють! Аква-Тамагочі нагадає, коли настане час пити.");
+            return;
+        }
         if (p.getBoolean("isDead", false)) return;
 
         if (ACTION_DRINK.equals(action)) {
@@ -92,7 +110,10 @@ final class Reminders {
 
     static void clearNotifications(Context ctx) {
         NotificationManager nm = (NotificationManager) ctx.getSystemService(Context.NOTIFICATION_SERVICE);
-        if (nm != null) nm.cancelAll();
+        if (nm != null) {
+            nm.cancel(NOTIF_DRINK);
+            nm.cancel(NOTIF_EVENING);
+        }
     }
 
     // ---------- Допоміжне ----------
@@ -121,20 +142,25 @@ final class Reminders {
 
     private static PendingIntent alarmIntent(Context ctx, String action) {
         Intent i = new Intent(ctx, ReminderReceiver.class).setAction(action);
-        int code = ACTION_DRINK.equals(action) ? 1 : 2;
+        int code = ACTION_DRINK.equals(action) ? 1 : ACTION_EVENING.equals(action) ? 2 : 3;
         return PendingIntent.getBroadcast(ctx, code, i,
             PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+    }
+
+    static boolean canExact(Context ctx) {
+        AlarmManager am = (AlarmManager) ctx.getSystemService(Context.ALARM_SERVICE);
+        return am != null && (Build.VERSION.SDK_INT < 31 || am.canScheduleExactAlarms());
     }
 
     private static void schedule(Context ctx, String action, long at) {
         AlarmManager am = (AlarmManager) ctx.getSystemService(Context.ALARM_SERVICE);
         if (am == null) return;
         PendingIntent pi = alarmIntent(ctx, action);
-        boolean exact = Build.VERSION.SDK_INT < 31 || am.canScheduleExactAlarms();
-        if (exact) {
+        if (canExact(ctx)) {
+            // Спрацьовує вчасно навіть у режимі сну (Doze) при заблокованому екрані
             am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pi);
         } else {
-            // Без дозволу на точні будильники система може зсунути час на кілька хвилин
+            // Без дозволу на точні будильники система може зсунути час
             am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pi);
         }
     }
@@ -147,11 +173,37 @@ final class Reminders {
     static void ensureChannel(Context ctx) {
         if (Build.VERSION.SDK_INT < 26) return;
         NotificationManager nm = (NotificationManager) ctx.getSystemService(Context.NOTIFICATION_SERVICE);
-        if (nm == null || nm.getNotificationChannel(CHANNEL_ID) != null) return;
+        if (nm == null) return;
+        if (nm.getNotificationChannel(OLD_CHANNEL_ID) != null) nm.deleteNotificationChannel(OLD_CHANNEL_ID);
+        if (nm.getNotificationChannel(CHANNEL_ID) != null) return;
         NotificationChannel ch = new NotificationChannel(CHANNEL_ID, "Нагадування пити воду",
             NotificationManager.IMPORTANCE_HIGH);
         ch.setDescription("Нагадування від Аква-Тамагочі, коли настав час пити");
+        ch.setLockscreenVisibility(Notification.VISIBILITY_PUBLIC);
+        ch.enableVibration(true);
+        ch.enableLights(true);
+        ch.setLightColor(0xFF0088FF);
+        ch.setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION),
+            new AudioAttributes.Builder()
+                .setUsage(AudioAttributes.USAGE_NOTIFICATION)
+                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                .build());
         nm.createNotificationChannel(ch);
+    }
+
+    /** Чи дозволені сповіщення застосунку і нашого каналу. */
+    static boolean notificationsEnabled(Context ctx) {
+        NotificationManager nm = (NotificationManager) ctx.getSystemService(Context.NOTIFICATION_SERVICE);
+        if (nm == null || !nm.areNotificationsEnabled()) return false;
+        if (Build.VERSION.SDK_INT >= 26) {
+            NotificationChannel ch = nm.getNotificationChannel(CHANNEL_ID);
+            if (ch != null && ch.getImportance() == NotificationManager.IMPORTANCE_NONE) return false;
+        }
+        return true;
+    }
+
+    static String channelId() {
+        return CHANNEL_ID;
     }
 
     @SuppressWarnings("deprecation")
@@ -177,6 +229,8 @@ final class Reminders {
             .setStyle(new Notification.BigTextStyle().bigText(text))
             .setContentIntent(content)
             .setAutoCancel(true)
+            .setShowWhen(true)
+            .setVisibility(Notification.VISIBILITY_PUBLIC)   // показувати на заблокованому екрані
             .setCategory(Notification.CATEGORY_REMINDER);
         try {
             nm.notify(id, b.build());

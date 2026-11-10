@@ -1,11 +1,11 @@
 {
-  "version": 1,
+  "version": 2,
   "minNativeCode": 6,
   "files": {
-    "index.html": "52cd493c5b702f568da0b4332db713274c60067e9efd5958c8edc9c8fd103a99",
+    "index.html": "70e3041d8f66c1f8a492f986aa2cb0ddae1a24cf3204736a180d5a15d7fdcf8c",
     "manifest.json": "c629253395d93546acd8bc7a84edc1d907442556385c3b38ce507a4ea825ecf6",
-    "css/style.css": "6d5bd8101132abd4169da332e2678abe01b48b5a9e7ac458d69e612381782765",
-    "js/app.js": "7bc4fb2778bb5741e564874cf71605fcb871027c8d1151468bf6d90438bdb5e8",
+    "css/style.css": "191e64e0a18a068846a57251d90211363618c762850ad3c2ea75b8a2386a86c7",
+    "js/app.js": "fe012ef8959c7966ec97ae21d02cde351ad39aeb4f8f52f7d90345dd7d124e8e",
     "js/weather.js": "b575cbe0c3b292d916ed37a2ff2f373ed2bb01f460ee38e215c33e4b292a96f1",
     "img/button/glass.png": "abaa2e375caa5fc3d9254c24fdf264db86a93ff73ba6bddada880e33248a795f",
     "img/charachter/regular_water.png": "eca53860b35754e4af534474e29e3b99cba7b56dfa2a19718a8b6b80f20e2251",

@@ -465,6 +465,48 @@ btnUpdateProfile.addEventListener('click', () => {
 
 btnRestart.addEventListener('click', restartGame);
 
+// Налаштування сповіщень — лише в застосунку Android (APK 1.5+)
+const NOTIF_CHECKS = [
+    { key: 'notifications', ok: 'Сповіщення дозволені', bad: 'Сповіщення вимкнені', fix: 'Дозволити' },
+    { key: 'exact', ok: 'Нагадування приходять вчасно', bad: 'Нагадування можуть запізнюватись', fix: 'Дозволити' },
+    { key: 'battery', ok: 'Батарея не обмежує гру', bad: 'Економія батареї може блокувати нагадування', fix: 'Налаштувати' }
+];
+
+function renderNotifSettings() {
+    if (!window.AndroidBridge || !AndroidBridge.getNotificationStatus) return;
+    let st = {};
+    try { st = JSON.parse(AndroidBridge.getNotificationStatus()); } catch (e) { return; }
+
+    const rows = NOTIF_CHECKS.map(c => {
+        const good = !!st[c.key];
+        return `<li class="${good ? 'ok' : 'bad'}"><span>${good ? '✅' : '⚠️'} ${good ? c.ok : c.bad}</span>` +
+            (good ? '' : `<button type="button" class="btn-link" data-open="${c.key}">${c.fix}</button>`) + '</li>';
+    });
+    if (st.xiaomi) {
+        rows.push(`<li class="${st.autostartConfirmed ? 'ok' : 'bad'}"><span>${st.autostartConfirmed ? '☑️' : '⚠️'} Автозапуск (Xiaomi)</span>` +
+            `<button type="button" class="btn-link" data-open="autostart">Відкрити</button></li>`);
+    }
+    $('notif-status').innerHTML = rows.join('');
+    $('notif-xiaomi-hint').classList.toggle('hidden', !st.xiaomi);
+    $('notif-settings').classList.remove('hidden');
+}
+
+if (window.AndroidBridge && AndroidBridge.getNotificationStatus) {
+    $('notif-status').addEventListener('click', (e) => {
+        const what = e.target.getAttribute && e.target.getAttribute('data-open');
+        if (what) AndroidBridge.openNotificationSetting(what);
+    });
+    $('btn-test-notif').addEventListener('click', () => {
+        AndroidBridge.testNotification();
+        $('notif-test-hint').classList.remove('hidden');
+    });
+    btnOpenSettings.addEventListener('click', renderNotifSettings);
+    // Повернулися з системних налаштувань — оновлюємо стан
+    document.addEventListener('visibilitychange', () => {
+        if (!document.hidden && !settingsModal.classList.contains('hidden')) renderNotifSettings();
+    });
+}
+
 // Версія та кнопка оновлення — лише в застосунку Android
 if (window.AndroidBridge && AndroidBridge.checkForUpdates) {
     try { $('app-version').textContent = AndroidBridge.getVersion(); } catch (e) { /* ignore */ }

@@ -686,3 +686,42 @@ input { -webkit-user-select: text; user-select: text; }
 
 /* Порожня панель (кнопка «Новий улюбленець» схована) не займає місця */
 .controls-bar:has(> .hidden:only-child) { display: none; }
+
+/* Налаштування сповіщень (лише Android) */
+.notif-settings {
+    margin-top: 15px;
+    padding-top: 12px;
+    border-top: 1px dashed #323238;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.notif-settings h4 { margin: 0; font-size: 14px; }
+
+.notif-status {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 12px;
+}
+
+.notif-status li {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+}
+
+.notif-status li.ok { color: #a8a8b3; }
+.notif-status li.bad { color: #ffcc66; }
+.notif-status .btn-link { flex-shrink: 0; }
+
+.notif-hint {
+    margin: 0;
+    font-size: 11px;
+    color: #7c7c8a;
+}

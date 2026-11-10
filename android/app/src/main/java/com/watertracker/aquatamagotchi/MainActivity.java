@@ -70,6 +70,7 @@ public class MainActivity extends Activity {
                 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
             requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, 1);
         }
+        NotificationSetup.maybeShowXiaomiHint(this);
 
         // Потрібен для alert()/prompt() у грі
         webView.setWebChromeClient(new WebChromeClient());
@@ -112,6 +113,24 @@ public class MainActivity extends Activity {
         @JavascriptInterface
         public void sync(double nextDrinkAt, int intervalSec, boolean isDead, boolean goalMet) {
             Reminders.sync(getApplicationContext(), (long) nextDrinkAt, intervalSec, isDead, goalMet);
+        }
+
+        @JavascriptInterface
+        public String getNotificationStatus() {
+            return NotificationSetup.status(MainActivity.this);
+        }
+
+        @JavascriptInterface
+        public void openNotificationSetting(final String what) {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() { NotificationSetup.open(MainActivity.this, what); }
+            });
+        }
+
+        @JavascriptInterface
+        public void testNotification() {
+            Reminders.scheduleTest(getApplicationContext());
         }
 
         @JavascriptInterface
