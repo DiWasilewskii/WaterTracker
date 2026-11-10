@@ -1,11 +1,11 @@
 {
-  "version": 2,
+  "version": 3,
   "minNativeCode": 6,
   "files": {
-    "index.html": "70e3041d8f66c1f8a492f986aa2cb0ddae1a24cf3204736a180d5a15d7fdcf8c",
+    "index.html": "7ef9404be13b3a1a31a736ed76c5026bed7f1a9a27d75c44f6b2282d9d85b9f6",
     "manifest.json": "c629253395d93546acd8bc7a84edc1d907442556385c3b38ce507a4ea825ecf6",
     "css/style.css": "191e64e0a18a068846a57251d90211363618c762850ad3c2ea75b8a2386a86c7",
-    "js/app.js": "fe012ef8959c7966ec97ae21d02cde351ad39aeb4f8f52f7d90345dd7d124e8e",
+    "js/app.js": "1b4323976fe270af065c82969fa9f942407d1b1c8999f6bd93d68e64fe1452e6",
     "js/weather.js": "b575cbe0c3b292d916ed37a2ff2f373ed2bb01f460ee38e215c33e4b292a96f1",
     "img/button/glass.png": "abaa2e375caa5fc3d9254c24fdf264db86a93ff73ba6bddada880e33248a795f",
     "img/charachter/regular_water.png": "eca53860b35754e4af534474e29e3b99cba7b56dfa2a19718a8b6b80f20e2251",

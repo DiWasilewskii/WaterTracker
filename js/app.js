@@ -496,10 +496,6 @@ if (window.AndroidBridge && AndroidBridge.getNotificationStatus) {
         const what = e.target.getAttribute && e.target.getAttribute('data-open');
         if (what) AndroidBridge.openNotificationSetting(what);
     });
-    $('btn-test-notif').addEventListener('click', () => {
-        AndroidBridge.testNotification();
-        $('notif-test-hint').classList.remove('hidden');
-    });
     btnOpenSettings.addEventListener('click', renderNotifSettings);
     // Повернулися з системних налаштувань — оновлюємо стан
     document.addEventListener('visibilitychange', () => {
