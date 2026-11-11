@@ -153,47 +153,58 @@ function activitiesExtraMl() {
 
 // ---------- План нагадувань для Android ----------
 
-function reminderText(o, prevWasSleep, sinceMs) {
-    const name = gameState.userName;
-    if (prevWasSleep) {
-        return {
-            title: `☀️ Доброго ранку${name ? ', ' + name : ''}!`,
-            text: 'Почни день зі склянки води — капелька вже скучила.'
-        };
-    }
+// Який пул для k-го нагадування поспіль без пиття (k = 0, 1, 2, …)
+function reminderPool(k, o, prevWasSleep) {
+    if (prevWasSleep) return 'morning';
     const act = o && o.act;
-    if (act && act.remind && act.remind <= 25) {
-        return {
-            title: `${act.emoji} ${act.short || act.name} — не забувай пити!`,
-            text: `${name ? name + ', під' : 'Під'} час активності тіло втрачає більше води. Зроби кілька ковтків.`
-        };
+    if (k === 0) return act && act.remind && act.remind <= 25 ? 'sport' : 'first';
+    return k === 1 ? 'second' : k === 2 ? 'third' : 'fourth';
+}
+
+// Перебирає всі нагадування від `start` до `until`: cb(t, k, pool, o)
+function walkReminders(start, until, cb) {
+    const occ = activityOccurrences(start - DAY_MS, until + DAY_MS);
+    let from = start;
+    for (let k = 0; k < 200; k++) {
+        const t = dueAfter(occ, from);
+        if (t > until) break;
+        const prev = activityAtFrom(occ, t - MIN_MS);
+        const prevWasSleep = !!(prev && prev.act.remind === 'off');
+        const o = activityAtFrom(occ, t);
+        cb(t, k, reminderPool(k, o, prevWasSleep), o);
+        from = t;
     }
-    return {
-        title: '💧 Аква-Тамагочі хоче пити!',
-        text: `${name ? name + ', в' : 'В'}ід останнього пиття минуло ${formatDuration(sinceMs)}. Не дай улюбленцю засохнути.`
-    };
+}
+
+// Людина попила: нагадування, що встигли прийти, «витрачають» репліки дня,
+// щоб наступні сповіщення сьогодні були новими
+function consumeShownReminders() {
+    const now = Date.now();
+    const last = gameState.lastDrinkAt || now;
+    const c = notifCounters();
+    walkReminders(Math.max(last, now - DAY_MS), now, (t, k, pool) => { c[pool] = (c[pool] || 0) + 1; });
 }
 
 // Список нагадувань на найближчі 36 год (якщо людина так і не вип'є):
-// перше — коли «настане час пити», далі — повтори з інтервалом поточної активності.
+// перше — коли «настане час пити», далі — повтори, і кожне наступне зліше за попереднє.
 function buildReminderPlan() {
     const now = Date.now();
     const last = gameState.lastDrinkAt || now;
     // Давно не відкривали гру — рахуємо повтори лише з останньої доби
     const start = Math.max(last, now - DAY_MS);
-    const occ = activityOccurrences(start - DAY_MS, now + PLAN_HORIZON_MS + DAY_MS);
+    const c = Object.assign({}, notifCounters());  // локальна копія денних лічильників
     const items = [];
-    let from = start;
-    for (let i = 0; i < 200; i++) {
-        const t = dueAfter(occ, from);
-        if (t > now + PLAN_HORIZON_MS) break;
-        if (t > now) {
-            const prev = activityAtFrom(occ, t - MIN_MS);
-            const prevWasSleep = !!(prev && prev.act.remind === 'off');
-            items.push({ at: t, ...reminderText(activityAtFrom(occ, t), prevWasSleep, t - last) });
-        }
-        from = t;
-    }
+    walkReminders(start, now + PLAN_HORIZON_MS, (t, k, pool, o) => {
+        const idx = c[pool] = (c[pool] || 0) + 1;
+        if (t <= now) return;  // вже показані — лише займають свої репліки
+        const line = notifLineAt(pool, idx - 1);
+        const vars = {
+            since: formatDuration(t - last),
+            act: o ? (o.act.short || o.act.name) : '',
+            emoji: o ? o.act.emoji : '💧'
+        };
+        items.push({ at: t, title: fillLine(line.t, vars), text: fillLine(line.x, vars) });
+    });
     return items;
 }
 

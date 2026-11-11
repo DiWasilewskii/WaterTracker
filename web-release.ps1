@@ -19,6 +19,7 @@ $Files = @(
     "css/style.css",
     "js/app.js",
     "js/weather.js",
+    "js/lines.js",
     "js/schedule.js",
     "js/chart.js",
     "img/button/glass.png",

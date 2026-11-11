@@ -270,7 +270,7 @@ function syncReminders() {
                 reminders: gameState.isDead ? [] : buildReminderPlan(),
                 fallbackSec: baseIntervalMin() * 60,
                 eveningAt: goalMet || gameState.isDead ? 0 : eveningWarningAt(),
-                eveningText: addressed('Денна норма ще не виконана! Випий води, інакше улюбленець не доживе до ранку.'),
+                eveningText: addressed(fillLine(notifLineAt('evening', 0))),
                 isDead: gameState.isDead
             }));
         } else {
@@ -399,8 +399,7 @@ function tick() {
     if (minute !== lastTickMinute) {
         lastTickMinute = minute;
         refreshDue();
-        renderCurrentActivity();
-        if (isChartOpen()) renderHydrationChart();
+        updateUI();  // рівень «образи» капельки росте з часом
     }
     renderTimer();
 }
@@ -419,6 +418,7 @@ function stopTimer() {
 
 // Людина щойно попила — відлік нагадувань починається заново
 function resetTimer() {
+    consumeShownReminders();  // показані сповіщення більше не повторюватимуться сьогодні
     gameState.lastDrinkAt = Date.now();
     refreshDue();
     saveState();
@@ -436,6 +436,8 @@ function drinkWater() {
     }
 
     const netHydration = Math.round(inputVolValue * drink.eff);
+    // На скільки хвилин запізнились із питтям (для реплік полегшення)
+    const lateMin = (Date.now() - gameState.nextDrinkAt) / 60000;
 
     gameState.waterDrunk += netHydration;
     gameState.totalVolume += inputVolValue;
@@ -448,10 +450,16 @@ function drinkWater() {
 
     const name = gameState.userName;
     const text = drink.msg(drink.full, inputVolValue, netHydration);
-    // Для води — подяка на ім'я, для решти — звертання на початку
-    petStatus.textContent = drink.id === 'water' && name
-        ? text.replace('! ', `! Дякую, ${name}! `)
-        : addressed(text);
+    if (lateMin >= 30) {
+        // Довго не пили — капелька з полегшенням (і докором)
+        petStatus.textContent = `${fillLine(pickStatusLine('relief'))} +${netHydration} мл`;
+    } else {
+        // Для води — подяка на ім'я, для решти — звертання на початку
+        petStatus.textContent = drink.id === 'water' && name
+            ? text.replace('! ', `! Дякую, ${name}! `)
+            : addressed(text);
+    }
+    currentLine = null;  // після пиття — свіжа репліка
 
     setTimeout(() => {
         isAnimatingDrink = false;
@@ -543,25 +551,41 @@ function updateUI() {
 
     if (isDead) {
         setPetMode('dead');
-        petStatus.textContent = gameState.userName
-            ? `Прощавай, ${gameState.userName}... Я помер від спраги на ${gameState.daysSurvived} день.`
-            : `Помер від спраги на ${gameState.daysSurvived} день...`;
     } else if (secondsLeft < 0) {
         setPetMode('sick');
-        petStatus.textContent = addressed("Мені зле! Швидше дай попити!");
     } else {
         setPetMode('alive');
-
-        if (gameState.waterDrunk === 0) {
-            petStatus.textContent = gameState.userName
-                ? `Привіт, ${gameState.userName}! Ціль на сьогодні — ${gameState.calculatedGoal} мл корисного зволоження!`
-                : `Ціль на сьогодні — ${gameState.calculatedGoal} мл корисного зволоження!`;
-        } else if (gameState.waterDrunk < gameState.calculatedGoal) {
-            petStatus.textContent = addressed("Продовжуй у тому ж дусі, політ нормальний!");
-        } else {
-            petStatus.textContent = addressed("Норму виконано! Я в повному порядку!");
-        }
     }
+    showStatusLine(statusPool(secondsLeft));
+}
+
+// Який пул реплік зараз доречний
+function statusPool(secondsLeft) {
+    if (gameState.isDead) return 'dead';
+    if (secondsLeft < 0) {
+        const lateMin = -secondsLeft / 60;
+        return lateMin < 30 ? 'over1' : lateMin < 90 ? 'over2' : lateMin < 180 ? 'over3' : 'over4';
+    }
+    const act = currentActivity();
+    if (act && act.act.id === 'sleep') return 'sleep';
+    if (gameState.waterDrunk === 0) return 'greeting';
+    return gameState.waterDrunk >= gameState.calculatedGoal ? 'goal' : 'ok';
+}
+
+// Репліка змінюється, коли змінився стан, або раз на 15 хв (без повторів за день)
+let currentLine = null;
+function showStatusLine(pool) {
+    const now = Date.now();
+    if (!currentLine || currentLine.pool !== pool || now - currentLine.at > 15 * 60000) {
+        currentLine = { pool, at: now, text: pickStatusLine(pool) };
+        saveUsedLines();
+    }
+    petStatus.textContent = fillLine(currentLine.text);
+}
+
+// Зберігаємо список показаних реплік, не чіпаючи нагадування
+function saveUsedLines() {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(gameState)); } catch (e) { /* ignore */ }
 }
 
 // ==========================================
