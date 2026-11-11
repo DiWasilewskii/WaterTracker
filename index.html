@@ -18,9 +18,9 @@
 
     <div class="game-container">
         
-        <!-- Верхня панель з кнопкою виклику налаштувань -->
+        <!-- Верхня панель з кнопкою профілю -->
         <div class="top-bar">
-            <button id="btn-open-settings" class="btn-icon">⚙️ Налаштування</button>
+            <button id="btn-open-profile" class="btn-icon">👤 <span id="profile-btn-label">Профіль</span></button>
             
             <!-- Віджет погоди -->
             <div class="weather-widget">
@@ -85,12 +85,16 @@
 
     </div>
 
-    <!-- Модальне вікно налаштувань (Popup) -->
-    <div id="settings-modal" class="modal hidden">
+    <!-- Модальне вікно профілю -->
+    <div id="profile-modal" class="modal hidden">
         <div class="modal-content">
-            <button type="button" id="btn-close-settings" class="close-modal" aria-label="Закрити">&times;</button>
-            <h3>⚙️ Профіль та Погода</h3>
-            
+            <button type="button" id="btn-close-profile" class="close-modal" aria-label="Закрити">&times;</button>
+            <h3>👤 Профіль</h3>
+
+            <label class="name-field">Ім'я:
+                <input type="text" id="input-name" maxlength="20" placeholder="Як тебе звати?" autocomplete="given-name" enterkeyhint="done">
+            </label>
+
             <div class="settings-grid">
                 <label>Вага (кг): <input type="number" inputmode="decimal" id="input-weight" value="60"></label>
                 <label>Зріст (см): <input type="number" inputmode="decimal" id="input-height" value="170"></label>
@@ -116,7 +120,18 @@
             </div>
             <p id="weather-status" class="weather-status-text">Очікування дії...</p>
 
-            <!-- Сповіщення — лише в застосунку Android -->
+            <!-- Перехід до налаштувань застосунку (лише Android) -->
+            <button type="button" id="btn-open-settings" class="btn-secondary hidden">⚙️ Налаштування</button>
+        </div>
+    </div>
+
+    <!-- Модальне вікно налаштувань (лише Android) -->
+    <div id="settings-modal" class="modal hidden">
+        <div class="modal-content">
+            <button type="button" id="btn-close-settings" class="close-modal" aria-label="Закрити">&times;</button>
+            <h3>⚙️ Налаштування</h3>
+
+            <!-- Сповіщення -->
             <div id="notif-settings" class="notif-settings hidden">
                 <h4>🔔 Сповіщення</h4>
                 <ul id="notif-status" class="notif-status"></ul>
@@ -125,11 +140,13 @@
                 </p>
             </div>
 
-            <!-- Видно лише в застосунку Android -->
+            <!-- Версія та оновлення -->
             <div id="app-update" class="app-update hidden">
                 <span>Версія <span id="app-version">—</span></span>
                 <button type="button" id="btn-check-update" class="btn-link">Перевірити оновлення</button>
             </div>
+
+            <button type="button" id="btn-back-to-profile" class="btn-secondary">← До профілю</button>
         </div>
     </div>
 

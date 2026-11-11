@@ -29,6 +29,7 @@ const DEFAULT_STATE = {
     height: 170,
     age: 25,
     gender: 'male',
+    userName: '',        // Ім'я, на яке звертається капелька
     city: 'Київ',
     calculatedGoal: 2000,
     currentTemp: 20,
@@ -66,6 +67,14 @@ const countdownTimer = $('countdown-timer');
 const btnRestart = $('btn-restart');
 
 // Модальне вікно налаштувань
+// Модальне вікно профілю
+const profileModal = $('profile-modal');
+const btnOpenProfile = $('btn-open-profile');
+const btnCloseProfile = $('btn-close-profile');
+const btnBackToProfile = $('btn-back-to-profile');
+const inputName = $('input-name');
+const profileBtnLabel = $('profile-btn-label');
+
 const settingsModal = $('settings-modal');
 const btnOpenSettings = $('btn-open-settings');
 const btnCloseSettings = $('btn-close-settings');
@@ -143,6 +152,7 @@ function initGame() {
         inputHeight.value = gameState.height;
         inputAge.value = gameState.age;
         inputGender.value = gameState.gender;
+        inputName.value = gameState.userName || '';
         inputCity.value = gameState.city;
         inputCustomMinutes.value = gameState.customMinutes || 60;
         syncIntervalSelect();
@@ -154,6 +164,7 @@ function initGame() {
     // Миттєво показуємо збережену погоду, не чекаючи мережі
     if (typeof applyCachedWeather === 'function') applyCachedWeather();
 
+    updateProfileLabel();
     checkNewDay();
     syncReminders();
     safeFetchWeather(false);
@@ -264,11 +275,12 @@ function drinkWater() {
     isAnimatingDrink = true;
     setPetMode('drinking');
 
+    const name = gameState.userName;
     const messages = {
-        water: `Глип-глип! +${netHydration} мл чистого здоров'я!`,
-        coffee: `Кава! Залито ${inputVolValue} мл, користі на +${netHydration} мл!`,
-        tea: `Чайочок! Корисної рідини додано: +${netHydration} мл.`,
-        soda: `Цукрова бомба! Користі всього +${netHydration} мл!`
+        water: `Глип-глип! ${name ? `Дякую, ${name}! ` : ''}+${netHydration} мл чистого здоров'я!`,
+        coffee: addressed(`Кава! Залито ${inputVolValue} мл, користі на +${netHydration} мл!`),
+        tea: addressed(`Чайочок! Корисної рідини додано: +${netHydration} мл.`),
+        soda: addressed(`Цукрова бомба! Користі всього +${netHydration} мл!`)
     };
     petStatus.textContent = messages[selectedDrinkType] || messages.water;
 
@@ -335,6 +347,18 @@ function renderTimer() {
     }
 }
 
+// Звертання на ім'я: "Мені зле!" → "Дмитро, мені зле!"
+function addressed(text) {
+    const name = gameState.userName;
+    if (!name) return text;
+    return `${name}, ${text.charAt(0).toLowerCase()}${text.slice(1)}`;
+}
+
+// Кнопка профілю показує ім'я, якщо воно є
+function updateProfileLabel() {
+    profileBtnLabel.textContent = gameState.userName || 'Профіль';
+}
+
 function updateUI() {
     waterCount.textContent = gameState.waterDrunk;
     waterGoal.textContent = gameState.calculatedGoal;
@@ -364,21 +388,25 @@ function updateUI() {
 
     if (isDead) {
         setPetMode('dead');
-        petStatus.textContent = `Помер від спраги на ${gameState.daysSurvived} день...`;
+        petStatus.textContent = gameState.userName
+            ? `Прощавай, ${gameState.userName}... Я помер від спраги на ${gameState.daysSurvived} день.`
+            : `Помер від спраги на ${gameState.daysSurvived} день...`;
     } else if (secondsLeft < 0) {
         setPetMode('sick');
-        petStatus.textContent = "Мені зле! Швидше дай попити!";
+        petStatus.textContent = addressed("Мені зле! Швидше дай попити!");
         countdownTimer.classList.add('overdue');
     } else {
         setPetMode('alive');
         countdownTimer.classList.remove('overdue');
 
         if (gameState.waterDrunk === 0) {
-            petStatus.textContent = `Ціль на сьогодні — ${gameState.calculatedGoal} мл корисного зволоження!`;
+            petStatus.textContent = gameState.userName
+                ? `Привіт, ${gameState.userName}! Ціль на сьогодні — ${gameState.calculatedGoal} мл корисного зволоження!`
+                : `Ціль на сьогодні — ${gameState.calculatedGoal} мл корисного зволоження!`;
         } else if (gameState.waterDrunk < gameState.calculatedGoal) {
-            petStatus.textContent = "Продовжуй у тому ж дусі, політ нормальний!";
+            petStatus.textContent = addressed("Продовжуй у тому ж дусі, політ нормальний!");
         } else {
-            petStatus.textContent = "Норму виконано! Я в повному порядку!";
+            petStatus.textContent = addressed("Норму виконано! Я в повному порядку!");
         }
     }
 }
@@ -413,8 +441,16 @@ intervalSelect.addEventListener('change', (e) => {
 function openModal(modal) { modal.classList.remove('hidden'); }
 function closeModal(modal) { modal.classList.add('hidden'); }
 
-btnOpenSettings.addEventListener('click', () => openModal(settingsModal));
+btnOpenProfile.addEventListener('click', () => openModal(profileModal));
+btnCloseProfile.addEventListener('click', () => closeModal(profileModal));
+
+// Профіль → Налаштування і назад
+btnOpenSettings.addEventListener('click', () => { closeModal(profileModal); openModal(settingsModal); });
+btnBackToProfile.addEventListener('click', () => { closeModal(settingsModal); openModal(profileModal); });
 btnCloseSettings.addEventListener('click', () => closeModal(settingsModal));
+
+// Налаштування застосунку є лише в Android
+if (window.AndroidBridge) btnOpenSettings.classList.remove('hidden');
 
 btnOpenDrinkModal.addEventListener('click', () => {
     if (!gameState.isDead) openModal(drinkModal);
@@ -426,7 +462,7 @@ btnDrinkConfirm.addEventListener('click', () => {
 });
 
 // Закриття будь-якого модального вікна при натисканні на темний фон навколо
-[settingsModal, drinkModal].forEach(modal => {
+[profileModal, settingsModal, drinkModal].forEach(modal => {
     modal.addEventListener('click', (e) => {
         if (e.target === modal) closeModal(modal);
     });
@@ -435,6 +471,7 @@ btnDrinkConfirm.addEventListener('click', () => {
 // Кнопка "Назад" на Android / Escape — закриває відкрите вікно
 window.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
+        closeModal(profileModal);
         closeModal(settingsModal);
         closeModal(drinkModal);
     }
@@ -442,6 +479,8 @@ window.addEventListener('keydown', (e) => {
 
 // Кнопка збереження профілю та нових таймерів
 btnUpdateProfile.addEventListener('click', () => {
+    gameState.userName = inputName.value.trim().slice(0, 20);
+    inputName.value = gameState.userName;
     gameState.weight = parseFloat(inputWeight.value) || 60;
     gameState.height = parseFloat(inputHeight.value) || 170;
     gameState.age = parseInt(inputAge.value, 10) || 25;
@@ -459,8 +498,10 @@ btnUpdateProfile.addEventListener('click', () => {
     }
 
     resetTimer();
+    updateProfileLabel();
+    updateUI();
     safeFetchWeather(true);
-    closeModal(settingsModal);
+    closeModal(profileModal);
 });
 
 btnRestart.addEventListener('click', restartGame);
