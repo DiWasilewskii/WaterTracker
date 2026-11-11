@@ -132,6 +132,11 @@ const DEFAULT_STATE = {
     nextDrinkAt: 0,           // Коли капелька захоче пити (мс) — обчислюється з розкладу
     schedule: null,           // Активності: [{ id, type, start, end, daily, date }]
     drinkLog: null,           // Пиття за сьогодні: [{ t, n }] — для графіка
+    womenMode: 'cycle',       // Жіноче здоров'я: cycle / pregnancy / breastfeeding / off
+    periodStarts: [],         // Дати початку місячних (YYYY-MM-DD)
+    cycleLength: 28,
+    periodLength: 5,
+    dueDate: '',              // Передбачувана дата пологів (YYYY-MM-DD)
     weight: 60,
     height: 170,
     age: 25,
@@ -197,6 +202,7 @@ const baseIntervalSelect = $('base-interval-select');
 
 // Розклад активностей
 const scheduleModal = $('schedule-modal');
+const cycleModal = $('cycle-modal');
 const btnOpenSchedule = $('btn-open-schedule');
 const btnCloseSchedule = $('btn-close-schedule');
 const scheduleList = $('schedule-list');
@@ -306,6 +312,7 @@ function initGame() {
     }
     purgeOldScheduleEntries();
     syncBaseIntervalSelect();
+    syncWomenInputs();
     refreshDue();
     recalculateWaterGoal();
 
@@ -354,6 +361,9 @@ function recalculateWaterGoal() {
 
     // Активності з розкладу на сьогодні (спорт, спека, сауна…)
     baseVolume += activitiesExtraMl();
+
+    // Цикл, вагітність, годування груддю (лише для жіночої статі)
+    baseVolume += womenAdjustment().ml;
 
     gameState.calculatedGoal = Math.max(1000, Math.round(baseVolume / 50) * 50);
     saveState();
@@ -450,7 +460,7 @@ function drinkWater() {
 
     const name = gameState.userName;
     const text = drink.msg(drink.full, inputVolValue, netHydration);
-    if (lateMin >= 30) {
+    if (lateMin >= 30 && !gentleMode()) {
         // Довго не пили — капелька з полегшенням (і докором)
         petStatus.textContent = `${fillLine(pickStatusLine('relief'))} +${netHydration} мл`;
     } else {
@@ -564,10 +574,15 @@ function statusPool(secondsLeft) {
     if (gameState.isDead) return 'dead';
     if (secondsLeft < 0) {
         const lateMin = -secondsLeft / 60;
-        return lateMin < 30 ? 'over1' : lateMin < 90 ? 'over2' : lateMin < 180 ? 'over3' : 'over4';
+        const level = lateMin < 30 ? 'over1' : lateMin < 90 ? 'over2' : lateMin < 180 ? 'over3' : 'over4';
+        // Вагітність і місячні: без жартів про «вбивство», максимум легкий сарказм
+        return gentleMode() && (level === 'over3' || level === 'over4') ? 'over2' : level;
     }
     const act = currentActivity();
     if (act && act.act.id === 'sleep') return 'sleep';
+    const mode = womenMode();
+    if (mode === 'pregnancy' && gameState.waterDrunk < gameState.calculatedGoal) return 'pregnant';
+    if (gentleMode() && gameState.waterDrunk < gameState.calculatedGoal) return 'period';
     if (gameState.waterDrunk === 0) return 'greeting';
     return gameState.waterDrunk >= gameState.calculatedGoal ? 'goal' : 'ok';
 }
@@ -672,7 +687,7 @@ btnDrinkConfirm.addEventListener('click', () => {
 });
 
 // Закриття будь-якого модального вікна при натисканні на темний фон навколо
-[profileModal, settingsModal, scheduleModal, drinkModal].forEach(modal => {
+[profileModal, settingsModal, scheduleModal, cycleModal, drinkModal].forEach(modal => {
     modal.addEventListener('click', (e) => {
         if (e.target === modal) closeModal(modal);
     });
@@ -684,6 +699,7 @@ window.addEventListener('keydown', (e) => {
         closeModal(profileModal);
         closeModal(settingsModal);
         closeModal(scheduleModal);
+        closeModal(cycleModal);
         closeModal(drinkModal);
     }
 });
@@ -696,6 +712,7 @@ btnUpdateProfile.addEventListener('click', () => {
     gameState.height = parseFloat(inputHeight.value) || 170;
     gameState.age = parseInt(inputAge.value, 10) || 25;
     gameState.gender = inputGender.value;
+    readWomenInputs();
     gameState.city = inputCity.value.trim() || "Київ";
 
     saveState();
@@ -862,6 +879,92 @@ function renderCurrentActivity() {
     }
     currentActivityLabel.textContent = `${o.act.emoji} ${o.act.short || o.act.name} до ${formatHM(o.e)}`;
     currentActivityLabel.classList.remove('hidden');
+}
+
+// ==========================================
+// ЖІНОЧЕ ЗДОРОВ'Я: профіль і календар циклу
+// ==========================================
+const womenSection = $('women-section');
+const inputWomenMode = $('input-women-mode');
+const inputCycleLength = $('input-cycle-length');
+const inputPeriodLength = $('input-period-length');
+const inputDueDate = $('input-due-date');
+
+// Показати потрібні поля залежно від статі та режиму (ще до збереження)
+function updateWomenSectionVisibility() {
+    const female = inputGender.value === 'female';
+    womenSection.classList.toggle('hidden', !female);
+    $('women-cycle').classList.toggle('hidden', inputWomenMode.value !== 'cycle');
+    $('women-pregnancy').classList.toggle('hidden', inputWomenMode.value !== 'pregnancy');
+    renderWomenEffect();
+}
+
+// Пояснення, як режим впливає на норму й нагадування
+function renderWomenEffect() {
+    const text = {
+        cycle: `У дні місячних норма +${WOMEN_EXTRA.period} мл і нагадування частіше, у лютеїновій фазі +${WOMEN_EXTRA.luteal} мл.`,
+        pregnancy: `Норма +${WOMEN_EXTRA.pregnancy} мл на день, нагадування щонайменше кожні ${WOMEN_INTERVAL_CAP.pregnancy} хв.`,
+        breastfeeding: `Норма +${WOMEN_EXTRA.breastfeeding} мл на день, нагадування щонайменше кожні ${WOMEN_INTERVAL_CAP.breastfeeding} хв.`,
+        off: 'Норма рахується лише за вагою, віком, погодою та активностями.'
+    };
+    $('women-effect').textContent = text[inputWomenMode.value] || '';
+}
+
+function syncWomenInputs() {
+    inputWomenMode.value = gameState.womenMode || 'cycle';
+    inputCycleLength.value = gameState.cycleLength || 28;
+    inputPeriodLength.value = gameState.periodLength || 5;
+    inputDueDate.value = gameState.dueDate || '';
+    updateWomenSectionVisibility();
+}
+
+function readWomenInputs() {
+    gameState.womenMode = inputWomenMode.value;
+    gameState.cycleLength = Math.min(45, Math.max(20, parseInt(inputCycleLength.value, 10) || 28));
+    gameState.periodLength = Math.min(10, Math.max(2, parseInt(inputPeriodLength.value, 10) || 5));
+    gameState.dueDate = inputDueDate.value || '';
+    recalculateWaterGoal();
+}
+
+inputGender.addEventListener('change', updateWomenSectionVisibility);
+inputWomenMode.addEventListener('change', updateWomenSectionVisibility);
+
+// Календар відкривається з профілю
+$('btn-open-cycle').addEventListener('click', () => {
+    // Тривалості з полів застосовуємо одразу, щоб прогноз у календарі був актуальний
+    gameState.cycleLength = Math.min(45, Math.max(20, parseInt(inputCycleLength.value, 10) || 28));
+    gameState.periodLength = Math.min(10, Math.max(2, parseInt(inputPeriodLength.value, 10) || 5));
+    calendarMonth = null;
+    renderCycleCalendar();
+    closeModal(profileModal);
+    openModal(cycleModal);
+});
+$('btn-back-from-cycle').addEventListener('click', () => { closeModal(cycleModal); openModal(profileModal); });
+$('btn-close-cycle').addEventListener('click', () => closeModal(cycleModal));
+
+$('btn-cycle-prev').addEventListener('click', () => {
+    calendarMonth = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() - 1, 1);
+    renderCycleCalendar();
+});
+$('btn-cycle-next').addEventListener('click', () => {
+    calendarMonth = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + 1, 1);
+    renderCycleCalendar();
+});
+
+$('cycle-grid').addEventListener('click', (e) => {
+    const day = e.target.closest('[data-date]');
+    if (!day) return;
+    togglePeriodStart(day.dataset.date);
+    recalculateWaterGoal();  // фаза могла змінитися — оновлюємо норму й зберігаємо
+    renderCycleCalendar();
+});
+
+// Підпис у картці дня: день циклу / тиждень вагітності
+function renderWomenChip() {
+    const chip = $('women-chip');
+    const text = womenChipText();
+    chip.textContent = text;
+    chip.classList.toggle('hidden', !text);
 }
 
 // Зупиняємо таймер, коли застосунок у фоні (економія батареї),

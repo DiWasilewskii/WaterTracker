@@ -111,7 +111,11 @@ function currentActivity() {
 }
 
 function baseIntervalMin() {
-    return Math.max(15, gameState.baseIntervalMin || 60);
+    let base = Math.max(15, gameState.baseIntervalMin || 60);
+    // Вагітність, годування, місячні — нагадування частіше
+    const cap = typeof womenAdjustment === 'function' ? womenAdjustment().cap : null;
+    if (cap) base = Math.min(base, cap);
+    return base;
 }
 
 // Інтервал нагадувань (хв) під час активності; null — не нагадувати
@@ -157,6 +161,8 @@ function activitiesExtraMl() {
 function reminderPool(k, o, prevWasSleep) {
     if (prevWasSleep) return 'morning';
     const act = o && o.act;
+    // Вагітність і місячні: сповіщення не стають «злими» далі другого рівня
+    if (k >= 2 && typeof gentleMode === 'function' && gentleMode()) return 'second';
     if (k === 0) return act && act.remind && act.remind <= 25 ? 'sport' : 'first';
     return k === 1 ? 'second' : k === 2 ? 'third' : 'fourth';
 }

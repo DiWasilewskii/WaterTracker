@@ -1206,3 +1206,118 @@ button.pet-days-badge[aria-expanded="true"] .chart-caret { transform: rotate(180
 /* Відкритий графік забирає ~110px — капелька трохи зменшується, щоб усе вміщалось */
 .pet { transition: height 0.3s ease; }
 body.chart-open .pet { height: clamp(110px, calc(38vh - 110px), 240px); }
+
+/* ==========================================
+   13. ЖІНОЧЕ ЗДОРОВ'Я
+   ========================================== */
+.women-section {
+    margin-top: 15px;
+    padding-top: 12px;
+    border-top: 1px dashed rgba(255, 255, 255, 0.18);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.women-section h4 { margin: 0; font-size: 14px; }
+.women-sub { display: flex; flex-direction: column; gap: 8px; }
+.women-sub.hidden { display: none; }
+.women-grid { margin-top: 0; }
+
+.women-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 13px;
+    color: #d6d6de;
+}
+
+.women-field select,
+.women-field input {
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    color: white;
+    padding: 8px;
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 16px;
+    color-scheme: dark;
+}
+
+/* Підпис у картці дня */
+.women-chip {
+    margin: 2px auto 0;
+    width: fit-content;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    background: rgba(255, 105, 180, 0.16);
+    border: 1px solid rgba(255, 150, 200, 0.35);
+    color: #f6dbe8;
+}
+
+/* Календар циклу */
+.cal-nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 10px 0 6px;
+    font-size: 15px;
+}
+
+.cal-nav .btn-link { font-size: 22px; text-decoration: none; padding: 0 10px; }
+
+.cal-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+}
+
+.cal-head {
+    text-align: center;
+    font-size: 11px;
+    color: #a8a8b3;
+    padding-bottom: 2px;
+}
+
+.cal-day {
+    aspect-ratio: 1;
+    border-radius: 50%;
+    border: 1px solid transparent;
+    background: rgba(255, 255, 255, 0.05);
+    color: #e1e1e6;
+    font-family: inherit;
+    font-size: 13px;
+    cursor: pointer;
+    padding: 0;
+}
+
+/* Кольори фаз: місячні — малиновий, фертильні — зелений, овуляція — насичений зелений */
+.cal-day.ph-period, .dot.ph-period { background: #c2185b; color: white; }
+.cal-day.ph-period.predicted, .dot.ph-period.predicted {
+    background: transparent;
+    border: 2px dashed #f06292;
+    color: #f8bbd0;
+}
+.cal-day.ph-fertile, .dot.ph-fertile { background: rgba(102, 187, 106, 0.35); }
+.cal-day.ph-ovulation, .dot.ph-ovulation { background: #43a047; color: white; }
+.cal-day.start { box-shadow: 0 0 0 2px #fff inset; font-weight: bold; }
+.cal-day.today { outline: 2px solid #4da6ff; outline-offset: 1px; }
+
+.cal-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 12px;
+    margin-top: 10px;
+    font-size: 11px;
+    color: #d6d6de;
+}
+
+.cal-legend .dot {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    vertical-align: middle;
+    margin-right: 3px;
+}

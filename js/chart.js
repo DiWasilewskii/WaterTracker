@@ -193,5 +193,6 @@ btnToggleChart.addEventListener('click', () => {
 function renderDayCard() {
     renderTodayDate();
     renderAvatar();
+    renderWomenChip();
     if (isChartOpen()) renderHydrationChart();
 }
