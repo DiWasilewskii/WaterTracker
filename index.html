@@ -157,20 +157,17 @@
             <h3>🥤 Що та скільки ви випили?</h3>
             
             <div class="drink-modal-body">
-                <label>Обрати напій:
-                    <select id="select-drink" class="input-control">
-                        <option value="water">💧 Чиста вода (100%)</option>
-                        <option value="tea">🍵 Зелений чай (90%)</option>
-                        <option value="coffee">☕ Кава (50%)</option>
-                        <option value="soda">🥤 Газировка (40%)</option>
-                    </select>
-                </label>
+                <div class="drink-picker-label">Обрати напій:</div>
+                <div id="drink-grid" class="drink-grid" role="radiogroup" aria-label="Категорія напою"></div>
+
+                <div class="drink-picker-label">Різновид <span class="drink-picker-hint">(% — скільки йде в гідратацію)</span>:</div>
+                <div id="drink-variants" class="drink-variants" role="radiogroup" aria-label="Різновид напою"></div>
 
                 <label>Об'єм (мл):
                     <input type="number" inputmode="numeric" id="input-custom-volume" class="input-control text-input" value="250" min="10" max="2000" placeholder="мл">
                 </label>
 
-                <button id="btn-drink-confirm" class="btn btn-main" style="margin-top: 15px;">Зарахувати напій</button>
+                <button id="btn-drink-confirm" class="btn btn-main">Зарахувати напій</button>
             </div>
         </div>
     </div>

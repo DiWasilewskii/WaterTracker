@@ -1,9 +1,115 @@
-const DRINK_EFFICIENCY = {
-    water: 1.0,
-    tea: 0.9,
-    coffee: 0.5,
-    soda: 0.4
-};
+// Напої: категорії → різновиди.
+// eff — частка, що йде в залік гідратації; vol — типовий об'єм (підставляється сам);
+// full — назва в репліці; msg (необов'язково) — власна репліка різновиду.
+// Репліка категорії: msg(full, v, n), де v — випито мл, n — корисна рідина мл.
+const DRINK_CATEGORIES = [
+    { id: 'water', emoji: '💧', name: 'Вода',
+      msg: (f, v, n) => `Глип-глип! +${n} мл чистого здоров'я!`,
+      variants: [
+        { id: 'water',     name: 'Звичайна',     eff: 1.0,  vol: 250 },
+        { id: 'mineral',   name: 'Мінеральна',   eff: 1.0,  vol: 250, msg: (f, v, n) => `Бульбашки лоскочуть! +${n} мл і трохи мінералів!` },
+        { id: 'sparkling', name: 'Газована',     eff: 1.0,  vol: 330, msg: (f, v, n) => `Пш-ш-ш! Газована вода: +${n} мл!` },
+        { id: 'lemon',     name: 'З лимоном',    eff: 1.0,  vol: 250, msg: (f, v, n) => `Кисленько й освіжаюче! +${n} мл!` },
+        { id: 'warm',      name: 'Тепла',        eff: 1.0,  vol: 200, msg: (f, v, n) => `Тепленько всередині! +${n} мл.` }
+      ] },
+    { id: 'tea', emoji: '🍵', name: 'Чай',
+      msg: (f, v, n) => `Чайочок! ${f}: +${n} мл.`,
+      variants: [
+        { id: 'tea',       name: 'Зелений',      full: 'Зелений чай',      eff: 0.9,  vol: 250 },
+        { id: 'blacktea',  name: 'Чорний',       full: 'Чорний чай',       eff: 0.85, vol: 250 },
+        { id: 'herbal',    name: "Трав'яний",    full: "Трав'яний чай",    eff: 0.95, vol: 250, msg: (f, v, n) => `Пахне літом! Трав'яний чай: +${n} мл.` },
+        { id: 'fruittea',  name: 'Фруктовий',    full: 'Фруктовий чай',    eff: 0.95, vol: 250 },
+        { id: 'matcha',    name: 'Матча',        eff: 0.85, vol: 150 },
+        { id: 'mate',      name: 'Мате',         eff: 0.85, vol: 200 },
+        { id: 'icedtea',   name: 'Холодний',     full: 'Холодний чай',     eff: 0.85, vol: 330 },
+        { id: 'chailatte', name: 'Чай-лате',     eff: 0.8,  vol: 300 }
+      ] },
+    { id: 'coffee', emoji: '☕', name: 'Кава',
+      msg: (f, v, n) => `${f}! Залито ${v} мл, користі на +${n} мл.`,
+      variants: [
+        { id: 'espresso',   name: 'Еспресо',      eff: 0.4,  vol: 40,  msg: (f, v, n) => `Еспресо — маленьке, але бадьоре! Лише +${n} мл.` },
+        { id: 'americano',  name: 'Американо',    eff: 0.65, vol: 200 },
+        { id: 'cappuccino', name: 'Капучино',     eff: 0.7,  vol: 200 },
+        { id: 'latte',      name: 'Лате',         eff: 0.75, vol: 300 },
+        { id: 'flatwhite',  name: 'Флет вайт',    eff: 0.7,  vol: 180 },
+        { id: 'raf',        name: 'Раф',          eff: 0.65, vol: 250 },
+        { id: 'icedlatte',  name: 'Айс-лате',     eff: 0.75, vol: 300 },
+        { id: 'coffee',     name: 'Фільтр',       full: 'Фільтр-кава',      eff: 0.6, vol: 250 },
+        { id: 'instant',    name: 'Розчинна',     full: 'Розчинна кава',    eff: 0.6, vol: 200 },
+        { id: 'decaf',      name: 'Без кофеїну',  full: 'Кава без кофеїну', eff: 0.9, vol: 200 }
+      ] },
+    { id: 'milk', emoji: '🥛', name: 'Молочне',
+      msg: (f, v, n) => `Молочні вуса! ${f}: +${n} мл.`,
+      variants: [
+        { id: 'milk',       name: 'Молоко',          eff: 0.9,  vol: 250 },
+        { id: 'kefir',      name: 'Кефір',           eff: 0.85, vol: 250, msg: (f, v, n) => `Кефірчик для животика! +${n} мл.` },
+        { id: 'ayran',      name: 'Айран',           eff: 0.9,  vol: 250 },
+        { id: 'ryazhanka',  name: 'Ряжанка',         eff: 0.85, vol: 250 },
+        { id: 'yogurt',     name: 'Питний йогурт',   eff: 0.8,  vol: 250 },
+        { id: 'plantmilk',  name: 'Рослинне молоко', eff: 0.9,  vol: 250 },
+        { id: 'protein',    name: 'Протеїновий коктейль', eff: 0.8, vol: 300, msg: (f, v, n) => `Сила й вода! Протеїновий коктейль: +${n} мл.` }
+      ] },
+    { id: 'juice', emoji: '🧃', name: 'Соки',
+      msg: (f, v, n) => `Вітамінчики! ${f}: +${n} мл, але пам'ятай про цукор.`,
+      variants: [
+        { id: 'orange',     name: 'Апельсиновий', full: 'Апельсиновий сік', eff: 0.8,  vol: 250 },
+        { id: 'juice',      name: 'Яблучний',     full: 'Яблучний сік',     eff: 0.8,  vol: 250 },
+        { id: 'tomato',     name: 'Томатний',     full: 'Томатний сік',     eff: 0.85, vol: 250 },
+        { id: 'fresh',      name: 'Фреш',         full: 'Свіжий фреш',      eff: 0.85, vol: 250 },
+        { id: 'multifruit', name: 'Мультифрукт',  eff: 0.75, vol: 250 },
+        { id: 'smoothie',   name: 'Смузі',        eff: 0.75, vol: 300, msg: (f, v, n) => `Густо й фруктово! Зараховую +${n} мл.` }
+      ] },
+    { id: 'soup', emoji: '🍲', name: 'Суп',
+      msg: (f, v, n) => `Смачно й тепло! ${f}: зараховую +${n} мл.`,
+      variants: [
+        { id: 'broth',      name: 'Бульйон',      eff: 0.95, vol: 250 },
+        { id: 'borscht',    name: 'Борщ',         eff: 0.85, vol: 300, msg: (f, v, n) => `Борщик! Смачно й корисно: +${n} мл.` },
+        { id: 'creamsoup',  name: 'Крем-суп',     eff: 0.75, vol: 300 },
+        { id: 'okroshka',   name: 'Окрошка',      eff: 0.9,  vol: 300 }
+      ] },
+    { id: 'compote', emoji: '🍒', name: 'Компот',
+      msg: (f, v, n) => `Як у бабусі! ${f}: +${n} мл.`,
+      variants: [
+        { id: 'compote',    name: 'Компот',       eff: 0.85, vol: 250 },
+        { id: 'uzvar',      name: 'Узвар',        eff: 0.85, vol: 250 },
+        { id: 'mors',       name: 'Морс',         eff: 0.85, vol: 250 },
+        { id: 'kissel',     name: 'Кисіль',       eff: 0.7,  vol: 250 }
+      ] },
+    { id: 'sport', emoji: '🏃', name: 'Спорт',
+      msg: (f, v, n) => `Електроліти на місці! ${f}: +${n} мл.`,
+      variants: [
+        { id: 'isotonic',    name: 'Ізотонік',              eff: 0.95, vol: 500 },
+        { id: 'coconut',     name: 'Кокосова вода',         eff: 1.0,  vol: 330 },
+        { id: 'electrolyte', name: 'Вода з електролітами',  eff: 1.0,  vol: 500 }
+      ] },
+    { id: 'sweet', emoji: '🥤', name: 'Солодке',
+      msg: (f, v, n) => `Цукрова бомба! ${f}: користі всього +${n} мл.`,
+      variants: [
+        { id: 'soda',       name: 'Кола',            eff: 0.4,  vol: 330 },
+        { id: 'lemonade',   name: 'Лимонад',         eff: 0.5,  vol: 330 },
+        { id: 'kvass',      name: 'Квас',            eff: 0.6,  vol: 500 },
+        { id: 'tonic',      name: 'Тонік',           eff: 0.5,  vol: 250 },
+        { id: 'cocoa',      name: 'Какао',           eff: 0.7,  vol: 250, msg: (f, v, n) => `Шоколадне щастя! Але користі лише +${n} мл.` },
+        { id: 'hotchoc',    name: 'Гарячий шоколад', eff: 0.6,  vol: 250 }
+      ] },
+    { id: 'energy', emoji: '⚡', name: 'Енергетик',
+      msg: (f, v, n) => `Ой, серце калатає! ${f}: лише +${n} мл — краще випий води.`,
+      variants: [
+        { id: 'energy',     name: 'Звичайний', full: 'Енергетик',           eff: 0.3,  vol: 250 },
+        { id: 'energyzero', name: 'Без цукру', full: 'Енергетик без цукру', eff: 0.35, vol: 250 }
+      ] }
+];
+
+// Плаский довідник різновидів: id → { ...різновид, cat, full, msg }
+const DRINK_BY_ID = {};
+DRINK_CATEGORIES.forEach(cat => cat.variants.forEach(v => {
+    DRINK_BY_ID[v.id] = { ...v, cat, full: v.full || v.name, msg: v.msg || cat.msg };
+}));
+
+// Обраний різновид (зі збереженого стану; невідомий id → звичайна вода)
+function currentDrink() {
+    return DRINK_BY_ID[gameState.lastDrink] || DRINK_BY_ID.water;
+}
 
 const STORAGE_KEY = 'tamagotchi_water_state_v4';
 const WEATHER_TTL_MS = 30 * 60 * 1000; // погоду оновлюємо не частіше ніж раз на 30 хв
@@ -29,6 +135,7 @@ const DEFAULT_STATE = {
     height: 170,
     age: 25,
     gender: 'male',
+    lastDrink: 'water',     // Останній обраний напій
     userName: '',        // Ім'я, на яке звертається капелька
     city: 'Київ',
     calculatedGoal: 2000,
@@ -47,7 +154,8 @@ let lastPetMode = '';
 const $ = (id) => document.getElementById(id);
 
 // DOM елементи вибору напою (у модальному вікні)
-const selectDrink = $('select-drink');
+const drinkGrid = $('drink-grid');
+const drinkVariants = $('drink-variants');
 const inputCustomVolume = $('input-custom-volume');
 
 // Лічильники та шкали
@@ -256,7 +364,7 @@ function resetTimer() {
 function drinkWater() {
     if (gameState.isDead || isAnimatingDrink) return false;
 
-    const selectedDrinkType = selectDrink.value;
+    const drink = currentDrink();
     const inputVolValue = parseInt(inputCustomVolume.value, 10);
 
     if (isNaN(inputVolValue) || inputVolValue <= 0) {
@@ -264,8 +372,7 @@ function drinkWater() {
         return false;
     }
 
-    const efficiency = DRINK_EFFICIENCY[selectedDrinkType] || 1.0;
-    const netHydration = Math.round(inputVolValue * efficiency);
+    const netHydration = Math.round(inputVolValue * drink.eff);
 
     gameState.waterDrunk += netHydration;
     gameState.totalVolume += inputVolValue;
@@ -276,13 +383,11 @@ function drinkWater() {
     setPetMode('drinking');
 
     const name = gameState.userName;
-    const messages = {
-        water: `Глип-глип! ${name ? `Дякую, ${name}! ` : ''}+${netHydration} мл чистого здоров'я!`,
-        coffee: addressed(`Кава! Залито ${inputVolValue} мл, користі на +${netHydration} мл!`),
-        tea: addressed(`Чайочок! Корисної рідини додано: +${netHydration} мл.`),
-        soda: addressed(`Цукрова бомба! Користі всього +${netHydration} мл!`)
-    };
-    petStatus.textContent = messages[selectedDrinkType] || messages.water;
+    const text = drink.msg(drink.full, inputVolValue, netHydration);
+    // Для води — подяка на ім'я, для решти — звертання на початку
+    petStatus.textContent = drink.id === 'water' && name
+        ? text.replace('! ', `! Дякую, ${name}! `)
+        : addressed(text);
 
     setTimeout(() => {
         isAnimatingDrink = false;
@@ -452,8 +557,58 @@ btnCloseSettings.addEventListener('click', () => closeModal(settingsModal));
 // Налаштування застосунку є лише в Android
 if (window.AndroidBridge) btnOpenSettings.classList.remove('hidden');
 
+// Вибір напою у два кроки: категорія (плитки) → різновид (кнопки під плитками)
+function renderDrinkGrid() {
+    drinkGrid.innerHTML = DRINK_CATEGORIES.map(c =>
+        `<button type="button" class="drink-tile" role="radio" data-cat="${c.id}">` +
+        `<span class="drink-emoji">${c.emoji}</span>` +
+        `<span class="drink-name">${c.name}</span></button>`
+    ).join('');
+    updateDrinkSelection();
+}
+
+function updateDrinkSelection() {
+    if (!DRINK_BY_ID[gameState.lastDrink]) gameState.lastDrink = 'water';
+    const drink = currentDrink();
+
+    drinkGrid.querySelectorAll('.drink-tile').forEach(tile => {
+        const on = tile.dataset.cat === drink.cat.id;
+        tile.classList.toggle('selected', on);
+        tile.setAttribute('aria-checked', on);
+    });
+
+    drinkVariants.innerHTML = drink.cat.variants.map(v =>
+        `<button type="button" class="drink-chip${v.id === drink.id ? ' selected' : ''}" role="radio" ` +
+        `aria-checked="${v.id === drink.id}" data-drink="${v.id}">${v.name} ` +
+        `<span class="drink-eff">${Math.round(v.eff * 100)}%</span></button>`
+    ).join('');
+}
+
+// Обрати різновид і підставити його типовий об'єм
+function selectDrink(id) {
+    gameState.lastDrink = id;
+    inputCustomVolume.value = DRINK_BY_ID[id].vol;
+    updateDrinkSelection();
+}
+
+drinkGrid.addEventListener('click', (e) => {
+    const tile = e.target.closest('.drink-tile');
+    if (!tile) return;
+    const cat = DRINK_CATEGORIES.find(c => c.id === tile.dataset.cat);
+    // Та сама категорія — лишаємо обраний різновид, інша — перший різновид
+    if (currentDrink().cat !== cat) selectDrink(cat.variants[0].id);
+});
+
+drinkVariants.addEventListener('click', (e) => {
+    const chip = e.target.closest('.drink-chip');
+    if (chip) selectDrink(chip.dataset.drink);
+});
+renderDrinkGrid();
+
 btnOpenDrinkModal.addEventListener('click', () => {
-    if (!gameState.isDead) openModal(drinkModal);
+    if (gameState.isDead) return;
+    selectDrink(currentDrink().id);
+    openModal(drinkModal);
 });
 btnCloseDrink.addEventListener('click', () => closeModal(drinkModal));
 
