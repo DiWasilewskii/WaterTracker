@@ -116,6 +116,11 @@ public class MainActivity extends Activity {
         }
 
         @JavascriptInterface
+        public void syncPlan(String json) {
+            Reminders.syncPlan(getApplicationContext(), json);
+        }
+
+        @JavascriptInterface
         public String getNotificationStatus() {
             return NotificationSetup.status(MainActivity.this);
         }

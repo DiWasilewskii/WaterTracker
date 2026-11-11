@@ -12,6 +12,9 @@ import android.media.AudioAttributes;
 import android.media.RingtoneManager;
 import android.os.Build;
 
+import org.json.JSONArray;
+import org.json.JSONObject;
+
 import java.util.Calendar;
 
 /**
@@ -43,8 +46,10 @@ final class Reminders {
 
     // ---------- Стан ----------
 
+    /** Старий формат (гра до версії 7): найближчий час і фіксований інтервал повторів. */
     static void sync(Context ctx, long nextDrinkAt, int intervalSec, boolean isDead, boolean goalMet) {
         prefs(ctx).edit()
+            .putBoolean("usePlan", false)
             .putLong("nextDrinkAt", nextDrinkAt)
             .putInt("intervalSec", intervalSec)
             .putBoolean("isDead", isDead)
@@ -54,9 +59,83 @@ final class Reminders {
         rescheduleAll(ctx);
     }
 
+    /**
+     * План нагадувань від гри (за розкладом активностей і часом від останнього пиття):
+     * { reminders: [{at, title, text}], fallbackSec, eveningAt, eveningText, isDead }.
+     * Тексти вже персоналізовані (ім'я, активність), уночі нагадувань у плані немає.
+     */
+    static void syncPlan(Context ctx, String json) {
+        try {
+            JSONObject o = new JSONObject(json);
+            prefs(ctx).edit()
+                .putBoolean("usePlan", true)
+                .putString("plan", o.optJSONArray("reminders") != null ? o.getJSONArray("reminders").toString() : "[]")
+                .putInt("intervalSec", o.optInt("fallbackSec", 3600))
+                .putLong("eveningAt", o.optLong("eveningAt", 0))
+                .putString("eveningText", o.optString("eveningText", ""))
+                .putBoolean("isDead", o.optBoolean("isDead", false))
+                .apply();
+        } catch (Exception ignored) {
+            return;
+        }
+        rescheduleAll(ctx);
+    }
+
+    /** Перше нагадування плану, що настає після `after` (або null). */
+    private static JSONObject nextPlanItem(SharedPreferences p, long after) {
+        try {
+            JSONArray arr = new JSONArray(p.getString("plan", "[]"));
+            JSONObject best = null;
+            for (int i = 0; i < arr.length(); i++) {
+                JSONObject it = arr.getJSONObject(i);
+                long at = it.optLong("at", 0);
+                if (at > after && (best == null || at < best.optLong("at"))) best = it;
+            }
+            return best;
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    /** Нагадування плану, яке мало спрацювати щойно (найпізніше не пізніше now + 1 хв). */
+    private static JSONObject duePlanItem(SharedPreferences p, long now) {
+        try {
+            JSONArray arr = new JSONArray(p.getString("plan", "[]"));
+            JSONObject best = null;
+            for (int i = 0; i < arr.length(); i++) {
+                JSONObject it = arr.getJSONObject(i);
+                long at = it.optLong("at", 0);
+                if (at <= now + 60_000L && (best == null || at > best.optLong("at"))) best = it;
+            }
+            return best;
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private static void rescheduleFromPlan(Context ctx, SharedPreferences p) {
+        long now = System.currentTimeMillis();
+        JSONObject next = nextPlanItem(p, now);
+        // План закінчився (гру давно не відкривали) — повторюємо з базовим інтервалом
+        schedule(ctx, ACTION_DRINK, next != null ? next.optLong("at") : now + repeatMs(p));
+
+        long evening = p.getLong("eveningAt", 0);
+        if (evening > now) schedule(ctx, ACTION_EVENING, evening);
+        else cancel(ctx, ACTION_EVENING);
+    }
+
     static void rescheduleAll(Context ctx) {
         SharedPreferences p = prefs(ctx);
-        if (p.getBoolean("isDead", false) || !p.contains("nextDrinkAt")) {
+        if (p.getBoolean("isDead", false)) {
+            cancel(ctx, ACTION_DRINK);
+            cancel(ctx, ACTION_EVENING);
+            return;
+        }
+        if (p.getBoolean("usePlan", false)) {
+            rescheduleFromPlan(ctx, p);
+            return;
+        }
+        if (!p.contains("nextDrinkAt")) {
             cancel(ctx, ACTION_DRINK);
             cancel(ctx, ACTION_EVENING);
             return;
@@ -89,6 +168,29 @@ final class Reminders {
             return;
         }
         if (p.getBoolean("isDead", false)) return;
+
+        if (p.getBoolean("usePlan", false)) {
+            long now = System.currentTimeMillis();
+            if (ACTION_DRINK.equals(action)) {
+                if (!appVisible) {
+                    JSONObject it = duePlanItem(p, now);
+                    if (it != null) {
+                        show(ctx, NOTIF_DRINK, it.optString("title"), it.optString("text"));
+                    } else {
+                        show(ctx, NOTIF_DRINK, "💧 Аква-Тамагочі хоче пити!",
+                            "Час випити води — не дай улюбленцю засохнути.");
+                    }
+                }
+                rescheduleFromPlan(ctx, p);
+            } else if (ACTION_EVENING.equals(action)) {
+                String text = p.getString("eveningText", "");
+                if (!appVisible) {
+                    show(ctx, NOTIF_EVENING, "⚠️ Денна норма ще не виконана",
+                        text.isEmpty() ? "Випий води, інакше улюбленець не доживе до ранку!" : text);
+                }
+            }
+            return;
+        }
 
         if (ACTION_DRINK.equals(action)) {
             if (!appVisible) {

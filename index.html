@@ -35,16 +35,11 @@
             <img id="pet-avatar" width="73" height="74" decoding="async" src="img/charachter/regular_water.png" class="pet alive" alt="Tamagotchi">
             <p id="pet-status">Ціль на сьогодні — очікування розрахунку...</p>
             <div id="countdown-timer" class="countdown-timer">01:00:00</div>
-            
-            <!-- Селект інтервалу (лівий нижній куток) -->
+            <div id="current-activity" class="current-activity hidden"></div>
+
+            <!-- Кнопка розкладу (лівий нижній куток) -->
             <div class="pet-interval-wrapper">
-                <select id="interval-select" class="pet-interval-select" title="Інтервал нагадувань">
-                    <option value="1800">30 хв</option>
-                    <option value="3600" selected>1 год</option>
-                    <option value="7200">2 год</option>
-                    <option value="10800">3 год</option>
-                    <option value="custom">Свій...</option>
-                </select>
+                <button type="button" id="btn-open-schedule" class="pet-interval-select">🗓️ Розклад</button>
             </div>
 
             <!-- Кнопка-склянка (правий нижній куток) -->
@@ -107,29 +102,39 @@
                 </label>
             </div>
 
-            <!-- Кастомний інтервал (з'являється, якщо обрано "Свій...") -->
-            <div id="custom-interval-wrapper" class="weather-setting hidden">
-                <label>Свій інтервал (хвилини): 
-                    <input type="number" inputmode="numeric" id="input-custom-minutes" value="60" min="1" max="1440">
-                </label>
-            </div>
-
             <div class="weather-setting">
                 <label>Місто: <input type="text" id="input-city" value="Київ"></label>
                 <button id="btn-update-profile" class="btn-sub">Зберегти та оновити</button>
             </div>
             <p id="weather-status" class="weather-status-text">Очікування дії...</p>
 
-            <!-- Перехід до налаштувань застосунку (лише Android) -->
-            <button type="button" id="btn-open-settings" class="btn-secondary hidden">⚙️ Налаштування</button>
+            <!-- Перехід до налаштувань застосунку -->
+            <button type="button" id="btn-open-settings" class="btn-secondary">⚙️ Налаштування</button>
         </div>
     </div>
 
-    <!-- Модальне вікно налаштувань (лише Android) -->
+    <!-- Модальне вікно налаштувань -->
     <div id="settings-modal" class="modal hidden">
         <div class="modal-content">
             <button type="button" id="btn-close-settings" class="close-modal" aria-label="Закрити">&times;</button>
             <h3>⚙️ Налаштування</h3>
+
+            <!-- Нагадування -->
+            <div class="reminder-settings">
+                <h4>⏱️ Нагадування</h4>
+                <label class="reminder-interval">Нагадувати у звичайний час кожні:
+                    <select id="base-interval-select">
+                        <option value="20">20 хв</option>
+                        <option value="30">30 хв</option>
+                        <option value="45">45 хв</option>
+                        <option value="60">1 год</option>
+                        <option value="90">1,5 год</option>
+                        <option value="120">2 год</option>
+                        <option value="180">3 год</option>
+                    </select>
+                </label>
+                <p class="notif-hint">Час рахується від останнього пиття. Під час активностей нагадування частішають, а уві сні вимикаються — налаштуйте їх у «🗓️ Розкладі».</p>
+            </div>
 
             <!-- Сповіщення -->
             <div id="notif-settings" class="notif-settings hidden">
@@ -147,6 +152,29 @@
             </div>
 
             <button type="button" id="btn-back-to-profile" class="btn-secondary">← До профілю</button>
+        </div>
+    </div>
+
+    <!-- Модальне вікно розкладу активностей -->
+    <div id="schedule-modal" class="modal hidden">
+        <div class="modal-content">
+            <button type="button" id="btn-close-schedule" class="close-modal" aria-label="Закрити">&times;</button>
+            <h3>🗓️ Розклад на день</h3>
+
+            <p id="schedule-summary" class="schedule-summary"></p>
+            <ul id="schedule-list" class="schedule-list"></ul>
+
+            <div class="schedule-add">
+                <h4>➕ Додати активність</h4>
+                <div id="activity-grid" class="activity-grid" role="radiogroup" aria-label="Активність"></div>
+                <p id="activity-info" class="notif-hint"></p>
+                <div class="schedule-times">
+                    <label>Початок <input type="time" id="input-activity-start" value="18:00"></label>
+                    <label>Кінець <input type="time" id="input-activity-end" value="19:00"></label>
+                </div>
+                <label class="schedule-daily"><input type="checkbox" id="input-activity-daily"> Повторювати щодня</label>
+                <button type="button" id="btn-add-activity" class="btn-sub">Додати в розклад</button>
+            </div>
         </div>
     </div>
 
@@ -174,6 +202,7 @@
 
     <!-- Підключення скриптів з папки js -->
     <script src="js/weather.js" defer></script>
+    <script src="js/schedule.js" defer></script>
     <script src="js/app.js" defer></script>
 </body>
 </html>

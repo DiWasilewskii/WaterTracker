@@ -1,11 +1,12 @@
 // Офлайн-кеш для веб-версії: файли гри — з мережі з резервом у кеші, API погоди не кешується
-const CACHE = 'aqua-tamagotchi-v2';
+const CACHE = 'aqua-tamagotchi-v3';
 const ASSETS = [
     './',
     'index.html',
     'css/style.css',
     'js/app.js',
     'js/weather.js',
+    'js/schedule.js',
     'manifest.json',
     'img/button/glass.png',
     'img/charachter/regular_water.png',

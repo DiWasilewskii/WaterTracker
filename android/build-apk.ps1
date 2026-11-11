@@ -6,8 +6,8 @@
 #   - Android build-tools 34 і платформу android-34 (dl.google.com)
 param(
     [string]$Tools = (Join-Path $env:LOCALAPPDATA "WaterTrackerAndroidTools"),
-    [string]$VersionName = "1.5",
-    [int]$VersionCode = 7,
+    [string]$VersionName = "1.6",
+    [int]$VersionCode = 8,
     # Мінімальний versionCode APK для веб-оновлень (APK 1.4 — перший, що їх підтримує)
     [int]$MinWebNative = 6
 )

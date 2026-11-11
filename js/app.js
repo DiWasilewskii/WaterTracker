@@ -127,10 +127,10 @@ const DEFAULT_STATE = {
     daysSurvived: 0,
     isDead: false,
     lastCheckedDate: new Date().toDateString(),
-    chosenInterval: 3600,
-    isCustomInterval: false,  // Чи увімкнено кастомний інтервал
-    customMinutes: 60,        // Значення кастомного інтервалу
-    nextDrinkAt: 0,           // Мітка часу (мс), коли треба пити наступного разу
+    baseIntervalMin: 60,      // Інтервал нагадувань у звичайний час (хв), налаштовується
+    lastDrinkAt: 0,           // Коли востаннє пили (мс) — від цього рахуються нагадування
+    nextDrinkAt: 0,           // Коли капелька захоче пити (мс) — обчислюється з розкладу
+    schedule: null,           // Активності: [{ id, type, start, end, daily, date }]
     weight: 60,
     height: 170,
     age: 25,
@@ -194,9 +194,21 @@ const inputHeight = $('input-height');
 const inputAge = $('input-age');
 const inputGender = $('input-gender');
 const inputCity = $('input-city');
-const intervalSelect = $('interval-select');
-const inputCustomMinutes = $('input-custom-minutes');
-const customIntervalWrapper = $('custom-interval-wrapper');
+const baseIntervalSelect = $('base-interval-select');
+
+// Розклад активностей
+const scheduleModal = $('schedule-modal');
+const btnOpenSchedule = $('btn-open-schedule');
+const btnCloseSchedule = $('btn-close-schedule');
+const scheduleList = $('schedule-list');
+const scheduleSummary = $('schedule-summary');
+const activityGrid = $('activity-grid');
+const activityInfo = $('activity-info');
+const inputActivityStart = $('input-activity-start');
+const inputActivityEnd = $('input-activity-end');
+const inputActivityDaily = $('input-activity-daily');
+const btnAddActivity = $('btn-add-activity');
+const currentActivityLabel = $('current-activity');
 
 // Модальне вікно напою
 const drinkModal = $('drink-modal');
@@ -215,12 +227,19 @@ function loadState() {
         const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
         if (!saved) return false;
         gameState = { ...DEFAULT_STATE, ...saved };
-        // Міграція зі старого формату (secondsLeft зберігався кожну секунду)
-        if (!gameState.nextDrinkAt) {
-            const left = typeof saved.secondsLeft === 'number' ? saved.secondsLeft : getIntervalSeconds();
-            gameState.nextDrinkAt = Date.now() + left * 1000;
+        // Міграція: фіксований інтервал → базовий інтервал у хвилинах
+        if (saved.baseIntervalMin === undefined) {
+            gameState.baseIntervalMin = saved.isCustomInterval
+                ? (saved.customMinutes || 60)
+                : Math.round((saved.chosenInterval || 3600) / 60);
         }
-        delete gameState.secondsLeft;
+        // Міграція: час останнього пиття відновлюємо зі старого таймера
+        if (!gameState.lastDrinkAt) {
+            gameState.lastDrinkAt = saved.nextDrinkAt
+                ? Math.min(Date.now(), saved.nextDrinkAt - gameState.baseIntervalMin * 60000)
+                : Date.now();
+        }
+        ['secondsLeft', 'chosenInterval', 'isCustomInterval', 'customMinutes'].forEach(k => delete gameState[k]);
         return true;
     } catch (e) {
         return false;
@@ -236,15 +255,28 @@ function saveState() {
 
 // Передає розклад нагадувань у застосунок Android (у браузері нічого не робить).
 // Сповіщення плануються системою і приходять, навіть коли застосунок закритий.
+// APK 1.6+: передаємо весь план нагадувань (за розкладом активностей і часом
+// від останнього пиття). Старіші APK отримують лише найближчий час та інтервал.
 let lastReminderKey = '';
 function syncReminders() {
     if (!window.AndroidBridge) return;
     const goalMet = gameState.waterDrunk >= gameState.calculatedGoal;
-    const key = [gameState.nextDrinkAt, getIntervalSeconds(), gameState.isDead, goalMet].join('|');
+    const key = [gameState.lastDrinkAt, JSON.stringify(scheduleEntries()), baseIntervalMin(),
+        gameState.isDead, goalMet, gameState.userName, dateKey(new Date())].join('|');
     if (key === lastReminderKey) return;
     lastReminderKey = key;
     try {
-        window.AndroidBridge.sync(gameState.nextDrinkAt, getIntervalSeconds(), gameState.isDead, goalMet);
+        if (window.AndroidBridge.syncPlan) {
+            window.AndroidBridge.syncPlan(JSON.stringify({
+                reminders: gameState.isDead ? [] : buildReminderPlan(),
+                fallbackSec: baseIntervalMin() * 60,
+                eveningAt: goalMet || gameState.isDead ? 0 : eveningWarningAt(),
+                eveningText: addressed('Денна норма ще не виконана! Випий води, інакше улюбленець не доживе до ранку.'),
+                isDead: gameState.isDead
+            }));
+        } else {
+            window.AndroidBridge.sync(gameState.nextDrinkAt, getIntervalSeconds(), gameState.isDead, goalMet);
+        }
     } catch (e) { /* міст недоступний */ }
 }
 
@@ -262,12 +294,15 @@ function initGame() {
         inputGender.value = gameState.gender;
         inputName.value = gameState.userName || '';
         inputCity.value = gameState.city;
-        inputCustomMinutes.value = gameState.customMinutes || 60;
-        syncIntervalSelect();
     } else {
-        resetTimer();
-        recalculateWaterGoal();
+        gameState.lastDrinkAt = Date.now();
     }
+    // Новим гравцям і тим, хто оновився, — типовий сон 23:00–07:00, щоб не будити вночі
+    if (!Array.isArray(gameState.schedule)) gameState.schedule = DEFAULT_SCHEDULE.map(e => ({ ...e }));
+    purgeOldScheduleEntries();
+    syncBaseIntervalSelect();
+    refreshDue();
+    recalculateWaterGoal();
 
     // Миттєво показуємо збережену погоду, не чекаючи мережі
     if (typeof applyCachedWeather === 'function') applyCachedWeather();
@@ -280,14 +315,18 @@ function initGame() {
     updateUI();
 }
 
-function syncIntervalSelect() {
-    if (gameState.isCustomInterval) {
-        intervalSelect.value = 'custom';
-        customIntervalWrapper.classList.remove('hidden');
-    } else {
-        intervalSelect.value = gameState.chosenInterval;
-        customIntervalWrapper.classList.add('hidden');
+// Список інтервалів у налаштуваннях; нестандартне значення (зі старого «Свій...») додаємо
+function syncBaseIntervalSelect() {
+    const v = String(baseIntervalMin());
+    if (![...baseIntervalSelect.options].some(o => o.value === v)) {
+        baseIntervalSelect.add(new Option(`${v} хв`, v));
     }
+    baseIntervalSelect.value = v;
+}
+
+// Перерахувати, коли капелька захоче пити (розклад + час від останнього пиття)
+function refreshDue() {
+    gameState.nextDrinkAt = computeDueAt();
 }
 
 function safeFetchWeather(force) {
@@ -308,6 +347,9 @@ function recalculateWaterGoal() {
     else if (gameState.currentTemp >= 25) baseVolume += 500;
     else if (gameState.currentTemp <= 5) baseVolume -= 150;
 
+    // Активності з розкладу на сьогодні (спорт, спека, сауна…)
+    baseVolume += activitiesExtraMl();
+
     gameState.calculatedGoal = Math.max(1000, Math.round(baseVolume / 50) * 50);
     saveState();
     updateUI();
@@ -324,23 +366,35 @@ function checkNewDay() {
             gameState.waterDrunk = 0;
             gameState.totalVolume = 0;
             gameState.lastCheckedDate = todayStr;
-            resetTimer();
+            // Новий день — нові активності «лише сьогодні» і нова норма
+            purgeOldScheduleEntries();
+            recalculateWaterGoal();
         }
         updateUI();
     }
 }
 
+// Інтервал нагадувань зараз (с) — для старих APK, що вміють лише фіксований інтервал
 function getIntervalSeconds() {
-    return gameState.isCustomInterval ? gameState.customMinutes * 60 : gameState.chosenInterval;
+    const o = currentActivity();
+    return (intervalFor(o && o.act) || baseIntervalMin()) * 60;
 }
 
 function getSecondsLeft() {
     return Math.ceil((gameState.nextDrinkAt - Date.now()) / 1000);
 }
 
+let lastTickMinute = 0;
 function tick() {
     if (gameState.isDead) { stopTimer(); return; }
     checkNewDay();
+    // Раз на хвилину: активність могла змінитися (почався біг, настав сон)
+    const minute = Math.floor(Date.now() / 60000);
+    if (minute !== lastTickMinute) {
+        lastTickMinute = minute;
+        refreshDue();
+        renderCurrentActivity();
+    }
     renderTimer();
 }
 
@@ -356,8 +410,10 @@ function stopTimer() {
     timerIntervalId = null;
 }
 
+// Людина щойно попила — відлік нагадувань починається заново
 function resetTimer() {
-    gameState.nextDrinkAt = Date.now() + getIntervalSeconds() * 1000;
+    gameState.lastDrinkAt = Date.now();
+    refreshDue();
     saveState();
 }
 
@@ -482,6 +538,8 @@ function updateUI() {
     lastRenderedTimer = formatTime(secondsLeft);
     countdownTimer.textContent = lastRenderedTimer;
 
+    renderCurrentActivity();
+
     // Якщо зараз іде анімація пиття — не переписуємо статус і спрайт
     if (isAnimatingDrink) return;
 
@@ -520,26 +578,11 @@ function updateUI() {
 // ОБРОБНИКИ ПОДІЙ
 // ==========================================
 
-// Обробка зміни інтервалу безпосередньо з екрана тамагочі
-intervalSelect.addEventListener('change', (e) => {
-    if (e.target.value === 'custom') {
-        const userInput = prompt("Введіть інтервал нагадування у хвилинах (наприклад: 45):", gameState.customMinutes || 60);
-        const mins = userInput === null ? NaN : parseInt(userInput, 10);
-
-        if (!isNaN(mins) && mins > 0) {
-            gameState.isCustomInterval = true;
-            gameState.customMinutes = mins;
-            inputCustomMinutes.value = mins;
-            resetTimer();
-        } else if (userInput !== null && userInput.trim() !== "") {
-            alert("Будь ласка, введіть коректне число більше 0.");
-        }
-    } else {
-        gameState.isCustomInterval = false;
-        gameState.chosenInterval = parseInt(e.target.value, 10);
-        resetTimer();
-    }
-    syncIntervalSelect();
+// Базовий інтервал нагадувань (у налаштуваннях)
+baseIntervalSelect.addEventListener('change', () => {
+    gameState.baseIntervalMin = parseInt(baseIntervalSelect.value, 10) || 60;
+    refreshDue();
+    saveState();
     updateUI();
 });
 
@@ -554,8 +597,6 @@ btnOpenSettings.addEventListener('click', () => { closeModal(profileModal); open
 btnBackToProfile.addEventListener('click', () => { closeModal(settingsModal); openModal(profileModal); });
 btnCloseSettings.addEventListener('click', () => closeModal(settingsModal));
 
-// Налаштування застосунку є лише в Android
-if (window.AndroidBridge) btnOpenSettings.classList.remove('hidden');
 
 // Вибір напою у два кроки: категорія (плитки) → різновид (кнопки під плитками)
 function renderDrinkGrid() {
@@ -617,7 +658,7 @@ btnDrinkConfirm.addEventListener('click', () => {
 });
 
 // Закриття будь-якого модального вікна при натисканні на темний фон навколо
-[profileModal, settingsModal, drinkModal].forEach(modal => {
+[profileModal, settingsModal, scheduleModal, drinkModal].forEach(modal => {
     modal.addEventListener('click', (e) => {
         if (e.target === modal) closeModal(modal);
     });
@@ -628,6 +669,7 @@ window.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
         closeModal(profileModal);
         closeModal(settingsModal);
+        closeModal(scheduleModal);
         closeModal(drinkModal);
     }
 });
@@ -642,17 +684,7 @@ btnUpdateProfile.addEventListener('click', () => {
     gameState.gender = inputGender.value;
     gameState.city = inputCity.value.trim() || "Київ";
 
-    if (intervalSelect.value === 'custom') {
-        gameState.isCustomInterval = true;
-        let mins = parseInt(inputCustomMinutes.value, 10);
-        if (isNaN(mins) || mins <= 0) mins = 60;
-        gameState.customMinutes = mins;
-    } else {
-        gameState.isCustomInterval = false;
-        gameState.chosenInterval = parseInt(intervalSelect.value, 10);
-    }
-
-    resetTimer();
+    saveState();
     updateProfileLabel();
     updateUI();
     safeFetchWeather(true);
@@ -704,6 +736,118 @@ if (window.AndroidBridge && AndroidBridge.checkForUpdates) {
     try { $('app-version').textContent = AndroidBridge.getVersion(); } catch (e) { /* ignore */ }
     $('app-update').classList.remove('hidden');
     $('btn-check-update').addEventListener('click', () => AndroidBridge.checkForUpdates());
+}
+
+// ==========================================
+// ВІКНО РОЗКЛАДУ
+// ==========================================
+let selectedActivity = 'run';
+
+function activityHint(act) {
+    const iv = intervalFor(act);
+    const remind = iv === null ? 'нагадувань немає' : `нагадування кожні ${iv} хв`;
+    return `${act.emoji} ${act.name}: ${act.ml ? `+${act.ml} мл/год до норми` : 'норма не змінюється'}, ${remind}.`;
+}
+
+function renderActivityGrid() {
+    activityGrid.innerHTML = ACTIVITIES.map(a =>
+        `<button type="button" class="drink-tile${a.id === selectedActivity ? ' selected' : ''}" role="radio" ` +
+        `aria-checked="${a.id === selectedActivity}" data-activity="${a.id}">` +
+        `<span class="drink-emoji">${a.emoji}</span><span class="drink-name">${a.short || a.name}</span></button>`
+    ).join('');
+    activityInfo.textContent = activityHint(ACTIVITY_BY_ID[selectedActivity]);
+}
+
+function renderScheduleList() {
+    const now = Date.now();
+    const cur = currentActivity();
+    const entries = scheduleEntries().slice().sort((a, b) => minutesOf(a.start) - minutesOf(b.start));
+
+    if (!entries.length) {
+        scheduleList.innerHTML = '<li class="schedule-empty">Поки що порожньо. Додайте свої активності нижче.</li>';
+    } else {
+        scheduleList.innerHTML = entries.map(e => {
+            const act = ACTIVITY_BY_ID[e.type];
+            if (!act) return '';
+            const isNow = cur && cur.entry.id === e.id;
+            const iv = intervalFor(act);
+            const meta = [act.ml ? `+${act.ml} мл/год` : null,
+                iv === null ? 'без нагадувань' : `кожні ${iv} хв`,
+                e.daily ? 'щодня' : 'сьогодні'].filter(Boolean).join(' · ');
+            return `<li class="schedule-item${isNow ? ' now' : ''}">` +
+                `<span class="schedule-emoji">${act.emoji}</span>` +
+                `<span class="schedule-text"><b>${act.name}</b> ${e.start}–${e.end}${isNow ? ' <span class="schedule-now">зараз</span>' : ''}` +
+                `<br><small>${meta}</small></span>` +
+                `<button type="button" class="schedule-del" data-del="${e.id}" aria-label="Видалити">✕</button></li>`;
+        }).join('');
+    }
+
+    const extra = activitiesExtraMl();
+    scheduleSummary.textContent = `Сьогодні активності додають ${extra ? `+${extra} мл` : '0 мл'} до норми. ` +
+        `Норма: ${gameState.calculatedGoal} мл. Наступне нагадування — о ${formatHM(Math.max(gameState.nextDrinkAt, now))}.`;
+}
+
+// Пропонуємо найближчу «круглу» годину як початок
+function suggestTimes() {
+    const d = new Date();
+    d.setHours(d.getHours() + 1, 0, 0, 0);
+    inputActivityStart.value = formatHM(d.getTime());
+    inputActivityEnd.value = formatHM(d.getTime() + 60 * MIN_MS);
+}
+
+function openSchedule() {
+    renderActivityGrid();
+    renderScheduleList();
+    suggestTimes();
+    openModal(scheduleModal);
+}
+
+// Розклад змінився: оновити норму, таймер, нагадування й списки
+function scheduleChanged() {
+    refreshDue();
+    recalculateWaterGoal();   // зберігає стан і синхронізує нагадування
+    renderScheduleList();
+    renderCurrentActivity();
+}
+
+activityGrid.addEventListener('click', (e) => {
+    const tile = e.target.closest('[data-activity]');
+    if (!tile) return;
+    selectedActivity = tile.dataset.activity;
+    renderActivityGrid();
+});
+
+btnAddActivity.addEventListener('click', () => {
+    const start = inputActivityStart.value, end = inputActivityEnd.value;
+    if (!start || !end || start === end) {
+        alert('Вкажіть час початку й кінця активності.');
+        return;
+    }
+    const entry = { id: `a${Date.now()}`, type: selectedActivity, start, end, daily: inputActivityDaily.checked };
+    if (!entry.daily) entry.date = dateKey(new Date());
+    gameState.schedule = scheduleEntries().concat(entry);
+    scheduleChanged();
+});
+
+scheduleList.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-del]');
+    if (!btn) return;
+    gameState.schedule = scheduleEntries().filter(x => x.id !== btn.dataset.del);
+    scheduleChanged();
+});
+
+btnOpenSchedule.addEventListener('click', openSchedule);
+btnCloseSchedule.addEventListener('click', () => closeModal(scheduleModal));
+
+// Підпис під таймером: що зараз за активність
+function renderCurrentActivity() {
+    const o = currentActivity();
+    if (!o || gameState.isDead) {
+        currentActivityLabel.classList.add('hidden');
+        return;
+    }
+    currentActivityLabel.textContent = `${o.act.emoji} ${o.act.short || o.act.name} до ${formatHM(o.e)}`;
+    currentActivityLabel.classList.remove('hidden');
 }
 
 // Зупиняємо таймер, коли застосунок у фоні (економія батареї),
