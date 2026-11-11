@@ -38,14 +38,16 @@ function applyWeatherEffects(weatherCode) {
     if (weatherCode === appliedWeatherCode) return;
     appliedWeatherCode = weatherCode;
 
-    const petScreen = document.querySelector('.pet-screen');
-    if (!petScreen) return;
+    // Фон і анімації — на весь екран; клас погоди на body керує й кольором тексту
+    const bg = document.getElementById('weather-bg');
+    if (!bg) return;
+    const weatherClasses = document.body.classList;
 
     // Очищаємо попередній оверлей та класи погоди
-    const oldOverlay = petScreen.querySelector('.weather-overlay');
+    const oldOverlay = bg.querySelector('.weather-overlay');
     if (oldOverlay) oldOverlay.remove();
 
-    petScreen.classList.remove('weather-sunny', 'weather-cloudy', 'weather-rainy', 'weather-snowy', 'weather-thunder', 'weather-windy');
+    weatherClasses.remove('weather-sunny', 'weather-cloudy', 'weather-rainy', 'weather-snowy', 'weather-thunder', 'weather-windy');
 
     if (weatherCode === null || weatherCode === undefined) return;
 
@@ -55,12 +57,12 @@ function applyWeatherEffects(weatherCode) {
 
     // ☀️ 0, 1 -> Ясно / Сонячно
     if (weatherCode === 0 || weatherCode === 1) {
-        petScreen.classList.add('weather-sunny');
+        weatherClasses.add('weather-sunny');
         overlay.innerHTML = `<div class="sun-ray"></div>`;
 
     // ☁️ 2, 3 -> Хмарно / Похмуро
     } else if (weatherCode === 2 || weatherCode === 3) {
-        petScreen.classList.add('weather-cloudy');
+        weatherClasses.add('weather-cloudy');
         overlay.innerHTML = `
             <div class="cloud cloud-1"></div>
             <div class="cloud cloud-2"></div>
@@ -68,28 +70,28 @@ function applyWeatherEffects(weatherCode) {
 
     // 🌧️ 51-67, 80-82 -> Дощ
     } else if ((weatherCode >= 51 && weatherCode <= 67) || (weatherCode >= 80 && weatherCode <= 82)) {
-        petScreen.classList.add('weather-rainy');
-        createParticles(overlay, 'rain-drop', 20, 0.6, 0.4, 1);
+        weatherClasses.add('weather-rainy');
+        createParticles(overlay, 'rain-drop', 35, 0.6, 0.4, 1);
 
     // ❄️ 71-77, 85-86 -> Сніг
     } else if ((weatherCode >= 71 && weatherCode <= 77) || weatherCode === 85 || weatherCode === 86) {
-        petScreen.classList.add('weather-snowy');
-        createParticles(overlay, 'snowflake', 15, 2, 3, 2);
+        weatherClasses.add('weather-snowy');
+        createParticles(overlay, 'snowflake', 25, 2, 3, 2);
 
     // 🌩️ 95-99 -> Гроза
     } else if (weatherCode >= 95) {
-        petScreen.classList.add('weather-thunder');
-        createParticles(overlay, 'rain-drop', 20, 0.5, 0.3, 1);
+        weatherClasses.add('weather-thunder');
+        createParticles(overlay, 'rain-drop', 35, 0.5, 0.3, 1);
         const flash = document.createElement('div');
         flash.className = 'lightning-flash';
         overlay.appendChild(flash);
 
     // 🌬️ 45, 48 -> Туман / Вітер (за замовчуванням хмарно)
     } else {
-        petScreen.classList.add('weather-cloudy');
+        weatherClasses.add('weather-cloudy');
     }
 
-    petScreen.appendChild(overlay);
+    bg.appendChild(overlay);
 }
 
 function renderWeatherWidget() {
