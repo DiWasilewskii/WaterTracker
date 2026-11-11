@@ -71,7 +71,7 @@ input { -webkit-user-select: text; user-select: text; }
    2. ЕКРАН ТАМАГОЧІ ТА ОВЕРЛЕЙ ПОГОДИ
    ========================================== */
 .pet-screen {
-    padding: 56px 20px 80px;
+    padding: 20px 20px 80px;
     flex: 1;
     min-height: 260px;
     display: flex;
@@ -1047,3 +1047,162 @@ button.pet-interval-select { color: #8cc8ff; }
     font-size: 13px;
     color: #d6d6de;
 }
+
+/* ==========================================
+   12. КАРТКА ДНЯ (профіль, погода, дні, дата, графік)
+   ========================================== */
+.day-card {
+    position: relative;
+    z-index: 3;
+    padding: 12px 12px 8px;
+    border-radius: 20px;
+    background: var(--glass-bg);
+    -webkit-backdrop-filter: var(--glass-blur);
+    backdrop-filter: var(--glass-blur);
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--glass-shadow);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+}
+
+.day-card .top-bar { gap: 8px; }
+
+/* Кнопка профілю: аватар + ім'я */
+.profile-chip {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    padding: 0;
+    background: none;
+    border: none;
+    color: #e1e1e6;
+    font-family: inherit;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+.avatar {
+    flex-shrink: 0;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    font-weight: bold;
+    color: white;
+    background: linear-gradient(135deg, #4da6ff, #0052d4);
+    border: 2px solid rgba(255, 255, 255, 0.5);
+    box-shadow: 0 0 12px rgba(0, 136, 255, 0.45);
+}
+
+.profile-chip #profile-btn-label { max-width: 6.5em; }
+
+/* Погода та дні — «пігулки» всередині картки */
+.day-card .weather-widget {
+    border-radius: 14px;
+    border-left: 1px solid var(--glass-border);
+    padding: 6px 10px;
+    white-space: nowrap;
+}
+
+.day-card .pet-days-badge {
+    position: static;
+    white-space: nowrap;
+    border-color: var(--glass-border);
+}
+
+.today-date {
+    margin: 8px 0 2px;
+    font-size: 15px;
+    color: #f0f0f4;
+}
+
+/* Графік пиття за сьогодні */
+.chart-wrap { position: relative; }
+
+.hydration-chart {
+    display: block;
+    width: 100%;
+    height: 92px;
+    touch-action: pan-y;
+    overflow: visible;
+}
+
+.ch-grid { stroke: rgba(255, 255, 255, 0.14); stroke-width: 1; }
+.ch-axis { fill: #b4b4be; font-size: 9px; font-family: inherit; text-shadow: none; }
+.ch-pace { stroke: rgba(255, 255, 255, 0.45); stroke-width: 1.5; stroke-dasharray: 4 4; }
+.ch-area { fill: rgba(77, 166, 255, 0.16); stroke: none; }
+.ch-line { fill: none; stroke: #4da6ff; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.ch-dot { fill: #4da6ff; stroke: #1e2a38; stroke-width: 2; }
+.ch-value { fill: #f0f0f4; font-size: 10px; font-weight: bold; font-family: inherit; }
+.ch-cursor { stroke: rgba(255, 255, 255, 0.5); stroke-width: 1; }
+
+.chart-tip {
+    position: absolute;
+    top: -6px;
+    transform: translate(-50%, -100%);
+    padding: 6px 10px;
+    border-radius: 10px;
+    background: rgba(18, 20, 28, 0.85);
+    border: 1px solid var(--glass-border);
+    font-size: 11px;
+    line-height: 1.35;
+    color: #e1e1e6;
+    white-space: nowrap;
+    pointer-events: none;
+    z-index: 5;
+}
+
+.chart-tip span { color: #b4b4be; }
+
+@media (max-width: 340px) {
+    .profile-chip #profile-btn-label { display: none; }
+    .avatar { width: 36px; height: 36px; }
+}
+
+/* Графік розгортається кнопкою «🔥 День» */
+.chart-wrap {
+    max-height: 120px;
+    opacity: 1;
+    overflow: visible;
+    transition: max-height 0.3s ease, opacity 0.25s ease;
+}
+
+.chart-wrap.collapsed {
+    max-height: 0;
+    opacity: 0;
+    overflow: hidden;
+    pointer-events: none;
+}
+
+button.pet-days-badge {
+    font-family: inherit;
+    cursor: pointer;
+}
+
+.chart-caret {
+    display: inline-block;
+    font-size: 10px;
+    transition: transform 0.25s ease;
+}
+
+button.pet-days-badge[aria-expanded="true"] .chart-caret { transform: rotate(180deg); }
+
+/* Капелька більша — займає основну частину екрана */
+.pet {
+    height: clamp(130px, 38vh, 320px);
+    margin: 4px 0 12px;
+}
+
+/* Компактніший верхній ряд, щоб ім'я вміщалось поруч з погодою та днями */
+.day-card .top-bar { gap: 6px; }
+.day-card .weather-widget,
+.day-card .pet-days-badge { font-size: 12px; padding: 5px 8px; }
+.day-card .avatar { width: 36px; height: 36px; font-size: 16px; }
+.profile-chip { gap: 6px; font-size: 13px; }
+
+/* Відкритий графік забирає ~110px — капелька трохи зменшується, щоб усе вміщалось */
+.pet { transition: height 0.3s ease; }
+body.chart-open .pet { height: clamp(110px, calc(38vh - 110px), 240px); }

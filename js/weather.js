@@ -94,11 +94,27 @@ function applyWeatherEffects(weatherCode) {
     bg.appendChild(overlay);
 }
 
+// Іконка погоди за кодом Open-Meteo
+function weatherEmoji(code) {
+    if (code === null || code === undefined) return '🌡️';
+    if (code === 0) return '☀️';
+    if (code === 1) return '🌤️';
+    if (code === 2) return '⛅';
+    if (code === 3) return '☁️';
+    if (code === 45 || code === 48) return '🌫️';
+    if ((code >= 71 && code <= 77) || code === 85 || code === 86) return '❄️';
+    if (code >= 95) return '⛈️';
+    if (code >= 51 && code <= 82) return '🌧️';
+    return '🌡️';
+}
+
 function renderWeatherWidget() {
     const weatherCitySpan = document.getElementById('weather-city');
     const weatherTempSpan = document.getElementById('weather-temp');
+    const weatherIcon = document.getElementById('weather-icon');
     if (weatherCitySpan) weatherCitySpan.textContent = gameState.city;
     if (weatherTempSpan) weatherTempSpan.textContent = `${gameState.currentTemp}°C`;
+    if (weatherIcon) weatherIcon.textContent = weatherEmoji(gameState.weatherCode);
 }
 
 // Показ збереженої погоди одразу при запуску (працює й без інтернету)

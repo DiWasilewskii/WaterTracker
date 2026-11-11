@@ -1,18 +1,19 @@
 {
-  "version": 7,
+  "version": 8,
   "minNativeCode": 6,
   "files": {
-    "index.html": "8d5898fe014d6444b717d239c5a51db586f162cb99ecbc3b01d13051f58d96e9",
+    "index.html": "93aa006e10289a80c790458f9af96415390371892051d923b0253528fcc4dcc8",
     "manifest.json": "c629253395d93546acd8bc7a84edc1d907442556385c3b38ce507a4ea825ecf6",
-    "css/style.css": "44efc14cfba18f2025586ea0df44837bdad887d08e2896742ec6ff0cd20e5070",
-    "js/app.js": "d49310ae80e5ea37ef4f41b3401054913c4d9d2519431b8e90ede4681b2f595e",
-    "js/weather.js": "5d259f1b5bc88306ee7cd810d6ca97ea1e2c163459dd6665cbfd117a3962ed4e",
+    "css/style.css": "6da0b8bee5e704cc8eb7535386a4afc2025275df4c3c6f652d78f5d6324b5b05",
+    "js/app.js": "e4325a16fc60ac1efe7a197485e52ace4840f54de34ed7e1772a29061a92e9f3",
+    "js/weather.js": "b2596cc7f2907a850b66e6efbf84dd86ec229f4fdd9df2b33b13dee341ad01f5",
     "js/schedule.js": "e851d0a6f30d6bf26df8216ce8b8aea78534e162fc0f2dc0f5c14caaec2ed1c3",
+    "js/chart.js": "adb368f1af721954a7d9090335ab85a4e36a9d2b2424d240f5dd98b74a62f114",
     "img/button/glass.png": "abaa2e375caa5fc3d9254c24fdf264db86a93ff73ba6bddada880e33248a795f",
-    "img/charachter/regular_water.png": "eca53860b35754e4af534474e29e3b99cba7b56dfa2a19718a8b6b80f20e2251",
-    "img/charachter/drink_water.png": "c8f0de37844100b802c955ebcdf7afaa8f3a1bd02999043ef45331a41a77274c",
-    "img/charachter/sick_water.png": "753448167bc411a87955cd38aec8552443f89bac6729d6e26533e3ad258675c7",
-    "img/charachter/death_water.png": "57627c83380bf62183af5d01de9c8ee6dcfd2788cad33df6063dec9ec3051bda",
+    "img/charachter/regular_water.png": "c84a1d893d39e53bf02eab24ea889ec03c71f48b93032c7fb9b2712d66c043a6",
+    "img/charachter/drink_water.png": "28de33a697a2f37cedc9e5e4c0c642516ec583c8d7d7c075cc865d47a6df8d5e",
+    "img/charachter/sick_water.png": "8a05e58395995f509aa860be593d8c7b04f083662e4bf9e8472beb84c774dcde",
+    "img/charachter/death_water.png": "7aebc0a448ccff4330c6d696e42dd3767bf0db047d4321fd5ec83bd7b67c2435",
     "img/icon-192.png": "f38e0fd56aa1269ba93ce9dcabf978e9923657dedd9b1863a76a7d26b5e92573"
   }
 }

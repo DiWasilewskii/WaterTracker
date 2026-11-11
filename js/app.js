@@ -131,6 +131,7 @@ const DEFAULT_STATE = {
     lastDrinkAt: 0,           // Коли востаннє пили (мс) — від цього рахуються нагадування
     nextDrinkAt: 0,           // Коли капелька захоче пити (мс) — обчислюється з розкладу
     schedule: null,           // Активності: [{ id, type, start, end, daily, date }]
+    drinkLog: null,           // Пиття за сьогодні: [{ t, n }] — для графіка
     weight: 60,
     height: 170,
     age: 25,
@@ -148,7 +149,6 @@ let gameState = { ...DEFAULT_STATE };
 
 let timerIntervalId = null;
 let isAnimatingDrink = false;
-let lastRenderedTimer = '';
 let lastPetMode = '';
 
 const $ = (id) => document.getElementById(id);
@@ -169,7 +169,6 @@ const totalVolumeFill = $('total-volume-fill'); // Червона шкала
 // Екран персонажа
 const petAvatar = $('pet-avatar');
 const petStatus = $('pet-status');
-const countdownTimer = $('countdown-timer');
 
 // Кнопки
 const btnRestart = $('btn-restart');
@@ -299,6 +298,12 @@ function initGame() {
     }
     // Новим гравцям і тим, хто оновився, — типовий сон 23:00–07:00, щоб не будити вночі
     if (!Array.isArray(gameState.schedule)) gameState.schedule = DEFAULT_SCHEDULE.map(e => ({ ...e }));
+    // Міграція: старі збереження без журналу пиття — один запис на весь випитий об'єм
+    if (!Array.isArray(gameState.drinkLog)) {
+        gameState.drinkLog = gameState.waterDrunk > 0
+            ? [{ t: Math.max(startOfDay(Date.now()), Math.min(gameState.lastDrinkAt || Date.now(), Date.now())), n: gameState.waterDrunk }]
+            : [];
+    }
     purgeOldScheduleEntries();
     syncBaseIntervalSelect();
     refreshDue();
@@ -366,6 +371,7 @@ function checkNewDay() {
             gameState.waterDrunk = 0;
             gameState.totalVolume = 0;
             gameState.lastCheckedDate = todayStr;
+            gameState.drinkLog = [];
             // Новий день — нові активності «лише сьогодні» і нова норма
             purgeOldScheduleEntries();
             recalculateWaterGoal();
@@ -394,6 +400,7 @@ function tick() {
         lastTickMinute = minute;
         refreshDue();
         renderCurrentActivity();
+        if (isChartOpen()) renderHydrationChart();
     }
     renderTimer();
 }
@@ -432,6 +439,7 @@ function drinkWater() {
 
     gameState.waterDrunk += netHydration;
     gameState.totalVolume += inputVolValue;
+    logDrink(netHydration);
 
     resetTimer();
 
@@ -465,21 +473,12 @@ function restartGame() {
     gameState.waterDrunk = 0;
     gameState.totalVolume = 0;
     gameState.daysSurvived = 0;
+    gameState.drinkLog = [];
     gameState.lastCheckedDate = new Date().toDateString();
     resetTimer();
     safeFetchWeather(false);
     startTimer();
     updateUI();
-}
-
-function formatTime(seconds) {
-    const isNegative = seconds < 0;
-    const absSeconds = Math.abs(seconds);
-    const hrs = Math.floor(absSeconds / 3600);
-    const mins = Math.floor((absSeconds % 3600) / 60);
-    const secs = absSeconds % 60;
-    const padded = [hrs, mins, secs].map(v => v < 10 ? '0' + v : v).join(':');
-    return isNegative ? `-${padded}` : padded;
 }
 
 // ==========================================
@@ -494,15 +493,9 @@ function setPetMode(mode) {
     petAvatar.className = `pet ${mode}`;
 }
 
-// Щосекундне оновлення: тільки текст таймера та перехід у стан "хворий"
+// Щосекундна перевірка: чи не час капельці «захворіти» від спраги
 function renderTimer() {
-    const secondsLeft = getSecondsLeft();
-    const text = formatTime(secondsLeft);
-    if (text !== lastRenderedTimer) {
-        countdownTimer.textContent = text;
-        lastRenderedTimer = text;
-    }
-    const wantSick = secondsLeft < 0;
+    const wantSick = getSecondsLeft() < 0;
     if (!isAnimatingDrink && !gameState.isDead && wantSick !== (lastPetMode === 'sick')) {
         updateUI();
     }
@@ -518,6 +511,7 @@ function addressed(text) {
 // Кнопка профілю показує ім'я, якщо воно є
 function updateProfileLabel() {
     profileBtnLabel.textContent = gameState.userName || 'Профіль';
+    renderAvatar();
 }
 
 function updateUI() {
@@ -535,16 +529,14 @@ function updateUI() {
     totalVolumeFill.style.transform = `scaleX(${totalPercent})`;
 
     const secondsLeft = getSecondsLeft();
-    lastRenderedTimer = formatTime(secondsLeft);
-    countdownTimer.textContent = lastRenderedTimer;
 
+    renderDayCard();
     renderCurrentActivity();
 
     // Якщо зараз іде анімація пиття — не переписуємо статус і спрайт
     if (isAnimatingDrink) return;
 
     const isDead = gameState.isDead;
-    countdownTimer.classList.toggle('hidden', isDead);
     btnOpenDrinkModal.classList.toggle('hidden', isDead);
     petIntervalWrapper.classList.toggle('hidden', isDead);
     btnRestart.classList.toggle('hidden', !isDead);
@@ -557,10 +549,8 @@ function updateUI() {
     } else if (secondsLeft < 0) {
         setPetMode('sick');
         petStatus.textContent = addressed("Мені зле! Швидше дай попити!");
-        countdownTimer.classList.add('overdue');
     } else {
         setPetMode('alive');
-        countdownTimer.classList.remove('overdue');
 
         if (gameState.waterDrunk === 0) {
             petStatus.textContent = gameState.userName
