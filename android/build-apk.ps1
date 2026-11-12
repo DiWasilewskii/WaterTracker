@@ -6,8 +6,8 @@
 #   - Android build-tools 34 і платформу android-34 (dl.google.com)
 param(
     [string]$Tools = (Join-Path $env:LOCALAPPDATA "WaterTrackerAndroidTools"),
-    [string]$VersionName = "1.6",
-    [int]$VersionCode = 8,
+    [string]$VersionName = "1.7",
+    [int]$VersionCode = 9,
     # Мінімальний versionCode APK для веб-оновлень (APK 1.4 — перший, що їх підтримує)
     [int]$MinWebNative = 6
 )
@@ -17,7 +17,7 @@ $ProgressPreference = "SilentlyContinue"
 $Root    = Split-Path $PSScriptRoot
 $AppDir  = Join-Path $PSScriptRoot "app\src\main"
 $Build   = Join-Path $PSScriptRoot "build"
-$OutApk  = Join-Path $Root "dist\AquaTamagotchi.apk"
+$OutApk  = Join-Path $Root "dist\Krapelka.apk"
 $KeyStore = Join-Path $PSScriptRoot "release.keystore"
 $KeyPass = "aquatamagotchi"   # ключ для самопідписаного APK (для встановлення вручну)
 

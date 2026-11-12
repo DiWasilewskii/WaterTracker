@@ -129,7 +129,7 @@ const DEFAULT_STATE = {
     lastCheckedDate: new Date().toDateString(),
     baseIntervalMin: 60,      // Інтервал нагадувань у звичайний час (хв), налаштовується
     lastDrinkAt: 0,           // Коли востаннє пили (мс) — від цього рахуються нагадування
-    nextDrinkAt: 0,           // Коли капелька захоче пити (мс) — обчислюється з розкладу
+    nextDrinkAt: 0,           // Коли крапелька захоче пити (мс) — обчислюється з розкладу
     schedule: null,           // Активності: [{ id, type, start, end, daily, date }]
     drinkLog: null,           // Пиття за сьогодні: [{ t, n }] — для графіка
     womenMode: 'cycle',       // Жіноче здоров'я: cycle / pregnancy / breastfeeding / off
@@ -142,7 +142,7 @@ const DEFAULT_STATE = {
     age: 25,
     gender: 'male',
     lastDrink: 'water',     // Останній обраний напій
-    userName: '',        // Ім'я, на яке звертається капелька
+    userName: '',        // Ім'я, на яке звертається крапелька
     city: 'Київ',
     calculatedGoal: 2000,
     currentTemp: 20,
@@ -347,7 +347,7 @@ function syncBaseIntervalSelect() {
     baseIntervalSelect.value = v;
 }
 
-// Перерахувати, коли капелька захоче пити (розклад + час від останнього пиття)
+// Перерахувати, коли крапелька захоче пити (розклад + час від останнього пиття)
 function refreshDue() {
     gameState.nextDrinkAt = computeDueAt();
 }
@@ -420,7 +420,7 @@ function tick() {
     if (minute !== lastTickMinute) {
         lastTickMinute = minute;
         refreshDue();
-        updateUI();  // рівень «образи» капельки росте з часом
+        updateUI();  // рівень «образи» крапельки росте з часом
     }
     renderTimer();
 }
@@ -472,7 +472,7 @@ function drinkWater() {
     const name = gameState.userName;
     const text = drink.msg(drink.full, inputVolValue, netHydration);
     if (lateMin >= 30 && !gentleMode()) {
-        // Довго не пили — капелька з полегшенням (і докором)
+        // Довго не пили — крапелька з полегшенням (і докором)
         petStatus.textContent = `${fillLine(pickStatusLine('relief'))} +${netHydration} мл`;
     } else {
         // Для води — подяка на ім'я, для решти — звертання на початку
@@ -522,7 +522,7 @@ function setPetMode(mode) {
     petAvatar.className = `pet ${mode}`;
 }
 
-// Щосекундна перевірка: чи не час капельці «захворіти» від спраги
+// Щосекундна перевірка: чи не час крапельці «захворіти» від спраги
 function renderTimer() {
     const wantSick = getSecondsLeft() < 0;
     if (!isAnimatingDrink && !gameState.isDead && wantSick !== (lastPetMode === 'sick')) {

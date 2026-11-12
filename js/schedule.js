@@ -172,7 +172,7 @@ function dueAfter(occ, from) {
     return from + baseIntervalMin() * MIN_MS;
 }
 
-// Час, коли капелька «захоче пити» (для таймера на головному екрані)
+// Час, коли крапелька «захоче пити» (для таймера на головному екрані)
 function computeDueAt() {
     const from = gameState.lastDrinkAt || Date.now();
     return dueAfter(activityOccurrences(from, from + 2 * DAY_MS + DAY_MS), from);

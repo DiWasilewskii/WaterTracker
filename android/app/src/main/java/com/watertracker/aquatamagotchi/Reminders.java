@@ -164,7 +164,7 @@ final class Reminders {
 
         if (ACTION_TEST.equals(action)) {
             show(ctx, NOTIF_TEST, "🔔 Тестове сповіщення",
-                "Сповіщення працюють! Аква-Тамагочі нагадає, коли настане час пити.");
+                "Сповіщення працюють! Крапелька нагадає, коли настане час пити.");
             return;
         }
         if (p.getBoolean("isDead", false)) return;
@@ -177,7 +177,7 @@ final class Reminders {
                     if (it != null) {
                         show(ctx, NOTIF_DRINK, it.optString("title"), it.optString("text"));
                     } else {
-                        show(ctx, NOTIF_DRINK, "💧 Аква-Тамагочі хоче пити!",
+                        show(ctx, NOTIF_DRINK, "💧 Крапелька хоче пити!",
                             "Час випити води — не дай улюбленцю засохнути.");
                     }
                 }
@@ -194,7 +194,7 @@ final class Reminders {
 
         if (ACTION_DRINK.equals(action)) {
             if (!appVisible) {
-                show(ctx, NOTIF_DRINK, "💧 Аква-Тамагочі хоче пити!",
+                show(ctx, NOTIF_DRINK, "💧 Крапелька хоче пити!",
                     "Час випити води — не дай улюбленцю засохнути.");
             }
             // Поки користувач не відмітить пиття — повторюємо нагадування
@@ -280,7 +280,7 @@ final class Reminders {
         if (nm.getNotificationChannel(CHANNEL_ID) != null) return;
         NotificationChannel ch = new NotificationChannel(CHANNEL_ID, "Нагадування пити воду",
             NotificationManager.IMPORTANCE_HIGH);
-        ch.setDescription("Нагадування від Аква-Тамагочі, коли настав час пити");
+        ch.setDescription("Нагадування від Крапельки, коли настав час пити");
         ch.setLockscreenVisibility(Notification.VISIBILITY_PUBLIC);
         ch.enableVibration(true);
         ch.enableLights(true);

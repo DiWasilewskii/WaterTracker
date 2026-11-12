@@ -132,7 +132,7 @@ function womenAdjustment() {
     return { ml: 0, reason: '', cap: null };
 }
 
-// Чи пом'якшувати тон капельки (без жартів про «вбивство»)
+// Чи пом'якшувати тон крапельки (без жартів про «вбивство»)
 function gentleMode() {
     const mode = womenMode();
     if (mode === 'pregnancy') return true;

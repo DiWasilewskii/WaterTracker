@@ -1,5 +1,5 @@
 // Офлайн-кеш для веб-версії: файли гри — з мережі з резервом у кеші, API погоди не кешується
-const CACHE = 'aqua-tamagotchi-v7';
+const CACHE = 'krapelka-v8';
 const ASSETS = [
     './',
     'index.html',

@@ -1,6 +1,6 @@
 # WaterTracker
 
-Аква-Тамагочі — улюбленець, який живе, поки ви п'єте достатньо води.
+Крапелька (англ. Krapelka) — улюбленець, який живе, поки ви п'єте достатньо води.
 Веб-версія (`index.html`) і застосунок Android (`android/`), що загортає її в WebView.
 
 ## Збирання APK
@@ -9,7 +9,7 @@
 powershell -ExecutionPolicy Bypass -File android\build-apk.ps1
 ```
 
-Результат: `dist\AquaTamagotchi.apk`. Перший запуск завантажує JDK і Android build-tools
+Результат: `dist\Krapelka.apk`. Перший запуск завантажує JDK і Android build-tools
 (~310 МБ) у `%LOCALAPPDATA%\WaterTrackerAndroidTools`.
 
 > Ключ підпису — `android/release.keystore` (не в git). Збережіть його окремо:
@@ -42,7 +42,7 @@ powershell -ExecutionPolicy Bypass -File android\build-apk.ps1
 3. На GitHub: **Releases → Draft a new release**
    - тег: `v` + VersionName, наприклад `v1.5`;
    - у полі опису — що нового (показується користувачам у вікні оновлення);
-   - прикріпіть `dist\AquaTamagotchi.apk`;
+   - прикріпіть `dist\Krapelka.apk`;
    - **Publish release**.
 
 Застосунок порівнює номер із тегу зі своєю версією, тож тег має бути більшим за поточну версію.

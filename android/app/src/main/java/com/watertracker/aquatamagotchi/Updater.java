@@ -159,7 +159,7 @@ final class Updater {
         con.setConnectTimeout(10000);
         con.setReadTimeout(10000);
         con.setRequestProperty("Accept", "application/vnd.github+json");
-        con.setRequestProperty("User-Agent", "AquaTamagotchi-Android");
+        con.setRequestProperty("User-Agent", "Krapelka-Android");
         try {
             if (con.getResponseCode() != 200) throw new Exception("HTTP " + con.getResponseCode());
             InputStream in = con.getInputStream();

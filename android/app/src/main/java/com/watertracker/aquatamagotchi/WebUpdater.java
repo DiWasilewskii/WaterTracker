@@ -214,7 +214,7 @@ final class WebUpdater {
         HttpURLConnection con = (HttpURLConnection) new URL(url).openConnection();
         con.setConnectTimeout(15000);
         con.setReadTimeout(20000);
-        con.setRequestProperty("User-Agent", "AquaTamagotchi-Android");
+        con.setRequestProperty("User-Agent", "Krapelka-Android");
         con.setUseCaches(false);
         try {
             if (con.getResponseCode() != 200) throw new IOException("HTTP " + con.getResponseCode());
