@@ -1380,3 +1380,29 @@ body.chart-open .pet { height: clamp(110px, calc(38vh - 110px), 240px); }
     flex-wrap: wrap;
     gap: 6px;
 }
+
+/* Акаунт і хмарне збереження */
+.account-form, .account-info {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 10px;
+}
+.account-form .name-field { margin-top: 4px; }
+.account-buttons {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+}
+.account-buttons > * { flex: 1; margin-top: 0; }
+.account-form .btn-link { align-self: center; }
+.account-info p { margin: 0; font-size: 14px; word-break: break-all; }
+#account-btn-label {
+    display: inline-block;
+    max-width: 85%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    vertical-align: bottom;
+}
+#account-status:empty { display: none; }

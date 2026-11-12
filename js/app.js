@@ -251,11 +251,16 @@ function loadState() {
     }
 }
 
+// Хмара щойно підставила дані з іншого пристрою і перезапускає гру — нічого не зберігаємо
+const cloudReloading = () => typeof Cloud !== 'undefined' && Cloud.isReloading();
+
 function saveState() {
+    if (cloudReloading()) return;
     try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(gameState));
     } catch (e) { /* сховище недоступне — граємо без збереження */ }
     syncReminders();
+    if (typeof Cloud !== 'undefined') Cloud.onLocalSave();
 }
 
 // Передає розклад нагадувань у застосунок Android (у браузері нічого не робить).
@@ -325,6 +330,12 @@ function initGame() {
     safeFetchWeather(false);
     startTimer();
     updateUI();
+
+    // Акаунт: підтягуємо новішу копію з іншого пристрою або відправляємо свою
+    if (typeof Cloud !== 'undefined') {
+        Cloud.initUI();
+        Cloud.sync();
+    }
 }
 
 // Список інтервалів у налаштуваннях; нестандартне значення (зі старого «Свій...») додаємо
@@ -600,6 +611,7 @@ function showStatusLine(pool) {
 
 // Зберігаємо список показаних реплік, не чіпаючи нагадування
 function saveUsedLines() {
+    if (cloudReloading()) return;
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(gameState)); } catch (e) { /* ignore */ }
 }
 
@@ -1075,11 +1087,13 @@ document.addEventListener('visibilitychange', () => {
     if (document.hidden) {
         stopTimer();
         saveState();
+        if (typeof Cloud !== 'undefined') Cloud.flush();
     } else {
         checkNewDay();
         startTimer();
         updateUI();
         safeFetchWeather(false);
+        if (typeof Cloud !== 'undefined') Cloud.sync();
     }
 });
 

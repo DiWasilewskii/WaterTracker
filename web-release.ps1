@@ -23,6 +23,8 @@ $Files = @(
     "js/women.js",
     "js/schedule.js",
     "js/chart.js",
+    "js/firebase-config.js",
+    "js/cloud.js",
     "img/button/glass.png",
     "img/charachter/regular_water.png",
     "img/charachter/drink_water.png",

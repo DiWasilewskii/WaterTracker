@@ -143,7 +143,7 @@
                 </div>
 
                 <p id="women-effect" class="notif-hint"></p>
-                <p class="notif-hint">Дані зберігаються лише на цьому пристрої. Це орієнтовні поради, а не медична рекомендація: під час вагітності або при набряках, хворобах серця чи нирок питний режим варто погодити з лікарем.</p>
+                <p class="notif-hint">Дані зберігаються на цьому пристрої (і у вашому акаунті, якщо ви увійшли). Це орієнтовні поради, а не медична рекомендація: під час вагітності або при набряках, хворобах серця чи нирок питний режим варто погодити з лікарем.</p>
             </div>
 
             <div class="weather-setting">
@@ -153,7 +153,43 @@
             <p id="weather-status" class="weather-status-text">Очікування дії...</p>
 
             <!-- Перехід до налаштувань застосунку -->
+            <button type="button" id="btn-open-account" class="btn-secondary">☁️ <span id="account-btn-label">Акаунт і синхронізація</span></button>
             <button type="button" id="btn-open-settings" class="btn-secondary">⚙️ Налаштування</button>
+        </div>
+    </div>
+
+    <!-- Модальне вікно: акаунт і хмарне збереження -->
+    <div id="account-modal" class="modal hidden">
+        <div class="modal-content">
+            <button type="button" id="btn-close-account" class="close-modal" aria-label="Закрити">&times;</button>
+            <h3>☁️ Акаунт</h3>
+
+            <p id="account-off" class="notif-hint hidden">Хмарне збереження ще не налаштоване — дані зберігаються лише на цьому пристрої.</p>
+
+            <form id="account-form" class="account-form hidden" novalidate>
+                <p class="notif-hint">Увійдіть, щоб зберегти прогрес у хмарі й продовжити гру на іншому пристрої.</p>
+                <label class="name-field">Email:
+                    <input type="email" id="account-email" autocomplete="email" inputmode="email" placeholder="you@example.com">
+                </label>
+                <label class="name-field">Пароль:
+                    <input type="password" id="account-password" autocomplete="current-password" placeholder="щонайменше 6 символів">
+                </label>
+                <div class="account-buttons">
+                    <button type="submit" id="btn-sign-in" class="btn-sub">Увійти</button>
+                    <button type="button" id="btn-sign-up" class="btn-secondary">Зареєструватися</button>
+                </div>
+                <button type="button" id="btn-reset-password" class="btn-link">Забули пароль?</button>
+            </form>
+
+            <div id="account-info" class="account-info hidden">
+                <p>Ви увійшли як <b id="account-user"></b></p>
+                <p id="account-synced" class="notif-hint"></p>
+                <button type="button" id="btn-sync-now" class="btn-secondary">🔄 Синхронізувати зараз</button>
+                <button type="button" id="btn-sign-out" class="btn-secondary">Вийти з акаунта</button>
+            </div>
+
+            <p id="account-status" class="weather-status-text"></p>
+            <button type="button" id="btn-account-back" class="btn-secondary">← До профілю</button>
         </div>
     </div>
 
@@ -279,6 +315,8 @@
     <script src="js/women.js" defer></script>
     <script src="js/schedule.js" defer></script>
     <script src="js/chart.js" defer></script>
+    <script src="js/firebase-config.js" defer></script>
+    <script src="js/cloud.js" defer></script>
     <script src="js/app.js" defer></script>
 </body>
 </html>
