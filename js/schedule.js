@@ -24,9 +24,43 @@ const ACTIVITIES = [
     { id: 'run',     emoji: '🏃', name: 'Біг',              ml: 600, remind: 15 },
     { id: 'team',    emoji: '⚽', name: 'Командний спорт',  short: 'Футбол / ігри', ml: 600, remind: 15 },
     { id: 'sauna',   emoji: '🧖', name: 'Сауна / лазня',    short: 'Сауна', ml: 700, remind: 15 },
-    { id: 'ill',     emoji: '🤒', name: 'Хвороба',          ml: 40,  remind: 40 }
+    { id: 'ill',     emoji: '🤒', name: 'Хвороба',          ml: 40,  remind: 40 },
+    { id: 'hike',    emoji: '🥾', name: 'Похід',            ml: 400, remind: 25 },
+    { id: 'garden',  emoji: '🌱', name: 'Сад / город',      ml: 400, remind: 25 },
+    { id: 'shopping', emoji: '🛒', name: 'Покупки',          ml: 100, remind: 50 },
+    { id: 'meeting', emoji: '🗣️', name: 'Наради / зустрічі', short: 'Наради', ml: 50, remind: null },
+    { id: 'creative', emoji: '🎨', name: 'Творчість',        ml: 50,  remind: null },
+    { id: 'train',   emoji: '🚆', name: 'Потяг / автобус',  short: 'Потяг', ml: 50, remind: null },
+    { id: 'cold',    emoji: '❄️', name: 'На морозі',        ml: 100, remind: 45 }
 ];
 const ACTIVITY_BY_ID = Object.fromEntries(ACTIVITIES.map(a => [a.id, a]));
+
+// Категорії активностей (порядок плиток у розкладі)
+// Спеку й мороз окремо не обираємо — їх враховує погода (heat/cold лишаються для старих записів)
+const ACTIVITY_CATEGORIES = [
+    { id: 'sport',  emoji: '🏅', name: 'Спорт',       items: ['gym', 'run', 'bike', 'swim', 'team', 'yoga', 'dance', 'hike'] },
+    { id: 'physical', emoji: '💪', name: 'Фізична',   items: ['labor', 'home', 'walk', 'garden', 'shopping'] },
+    { id: 'mental', emoji: '🧠', name: 'Розумова',    items: ['office', 'study', 'meeting', 'creative'] },
+    { id: 'travel', emoji: '🚗', name: 'Дорога',      items: ['commute', 'train', 'flight'] },
+    { id: 'rest',   emoji: '😴', name: "Сон, відпочинок і здоров'я", short: 'Відпочинок', items: ['sleep', 'rest', 'party', 'sauna', 'ill'] }
+];
+
+// Як повторюється запис розкладу
+const REPEAT_LABELS = { once: 'лише цей день', daily: 'щодня', weekdays: 'по буднях', weekends: 'по вихідних' };
+
+function entryRepeat(e) {
+    return e.repeat || (e.daily ? 'daily' : 'once');
+}
+
+// Чи діє запис у конкретний день
+function entryAppliesOn(e, day) {
+    const rep = entryRepeat(e);
+    const wd = day.getDay();
+    if (rep === 'daily') return true;
+    if (rep === 'weekdays') return wd >= 1 && wd <= 5;
+    if (rep === 'weekends') return wd === 0 || wd === 6;
+    return e.date === dateKey(day);
+}
 
 const MIN_MS = 60 * 1000;
 const DAY_MS = 24 * 60 * MIN_MS;
@@ -72,19 +106,21 @@ function scheduleEntries() {
     return Array.isArray(gameState.schedule) ? gameState.schedule : [];
 }
 
-// Записи «лише сьогодні» з минулих днів більше не потрібні
+// Разові записи старші за 30 днів більше не потрібні
 function purgeOldScheduleEntries() {
-    const today = dateKey(new Date());
-    gameState.schedule = scheduleEntries().filter(e => e.daily || e.date >= today);
+    const old = new Date();
+    old.setDate(old.getDate() - 30);
+    const limit = dateKey(old);
+    gameState.schedule = scheduleEntries().filter(e => entryRepeat(e) !== 'once' || e.date >= limit);
 }
 
 // Конкретні проміжки активностей (з датами) у діапазоні [from, to)
 function activityOccurrences(from, to) {
     const occ = [];
     for (let day = startOfDay(from) - DAY_MS; day < to; day += DAY_MS) {
-        const key = dateKey(new Date(day));
+        const dayDate = new Date(day);
         scheduleEntries().forEach(e => {
-            if (!e.daily && e.date !== key) return;
+            if (!entryAppliesOn(e, dayDate)) return;
             const act = ACTIVITY_BY_ID[e.type];
             if (!act) return;
             const s = day + minutesOf(e.start) * MIN_MS;
@@ -142,9 +178,9 @@ function computeDueAt() {
     return dueAfter(activityOccurrences(from, from + 2 * DAY_MS + DAY_MS), from);
 }
 
-// Скільки води додають активності сьогодні (мл)
-function activitiesExtraMl() {
-    const day = startOfDay(Date.now());
+// Скільки води додають активності в день (мл); без аргументу — сьогодні
+function activitiesExtraMl(dayTs) {
+    const day = startOfDay(dayTs || Date.now());
     const occ = activityOccurrences(day, day + DAY_MS);
     let ml = 0;
     occ.forEach(o => {

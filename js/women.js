@@ -170,51 +170,6 @@ function nextPeriodIn() {
     return daysBetween(new Date(), next);
 }
 
-// ---------- Календар циклу ----------
-
-let calendarMonth = null;  // перше число місяця, що показується
-const UA_MONTHS = ['Січень', 'Лютий', 'Березень', 'Квітень', 'Травень', 'Червень',
-    'Липень', 'Серпень', 'Вересень', 'Жовтень', 'Листопад', 'Грудень'];
-
-function renderCycleCalendar() {
-    const grid = document.getElementById('cycle-grid');
-    if (!calendarMonth) {
-        const t = new Date();
-        calendarMonth = new Date(t.getFullYear(), t.getMonth(), 1);
-    }
-    document.getElementById('cycle-month').textContent =
-        `${UA_MONTHS[calendarMonth.getMonth()]} ${calendarMonth.getFullYear()}`;
-
-    const todayKey = dateKey(new Date());
-    const starts = new Set(periodStarts());
-    const offset = (calendarMonth.getDay() + 6) % 7;  // тиждень з понеділка
-    const daysInMonth = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + 1, 0).getDate();
-
-    let html = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Нд'].map(d => `<div class="cal-head">${d}</div>`).join('');
-    for (let i = 0; i < offset; i++) html += '<div></div>';
-    for (let d = 1; d <= daysInMonth; d++) {
-        const date = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth(), d);
-        const key = dateKey(date);
-        const info = cycleInfo(date);
-        const cls = ['cal-day'];
-        if (info) cls.push(`ph-${info.phase}`);
-        if (info && info.predicted) cls.push('predicted');
-        if (starts.has(key)) cls.push('start');
-        if (key === todayKey) cls.push('today');
-        const label = info ? `${d}: ${PHASES[info.phase].name}${info.predicted ? ' (прогноз)' : ''}` : String(d);
-        html += `<button type="button" class="${cls.join(' ')}" data-date="${key}" aria-label="${label}">${d}</button>`;
-    }
-    grid.innerHTML = html;
-
-    // Підсумок під календарем
-    const today = cycleInfo(new Date());
-    const next = nextPeriodIn();
-    document.getElementById('cycle-summary').textContent = today
-        ? `Сьогодні ${today.day}-й день циклу (${PHASES[today.phase].name.toLowerCase()}). ` +
-          `Середній цикл: ${cycleLength()} дн.` + (next !== null ? ` Наступні місячні — приблизно через ${next} дн.` : '')
-        : 'Торкніться дня, коли почалися останні місячні, — і календар порахує цикл.';
-}
-
 // Торкання дня: відмітити / зняти початок місячних
 function togglePeriodStart(key) {
     if (key > dateKey(new Date())) {

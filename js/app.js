@@ -202,16 +202,16 @@ const baseIntervalSelect = $('base-interval-select');
 
 // Розклад активностей
 const scheduleModal = $('schedule-modal');
-const cycleModal = $('cycle-modal');
 const btnOpenSchedule = $('btn-open-schedule');
 const btnCloseSchedule = $('btn-close-schedule');
 const scheduleList = $('schedule-list');
 const scheduleSummary = $('schedule-summary');
 const activityGrid = $('activity-grid');
+const activityCats = $('activity-cats');
 const activityInfo = $('activity-info');
 const inputActivityStart = $('input-activity-start');
 const inputActivityEnd = $('input-activity-end');
-const inputActivityDaily = $('input-activity-daily');
+const inputActivityRepeat = $('input-activity-repeat');
 const btnAddActivity = $('btn-add-activity');
 const currentActivityLabel = $('current-activity');
 
@@ -687,7 +687,7 @@ btnDrinkConfirm.addEventListener('click', () => {
 });
 
 // Закриття будь-якого модального вікна при натисканні на темний фон навколо
-[profileModal, settingsModal, scheduleModal, cycleModal, drinkModal].forEach(modal => {
+[profileModal, settingsModal, scheduleModal, drinkModal].forEach(modal => {
     modal.addEventListener('click', (e) => {
         if (e.target === modal) closeModal(modal);
     });
@@ -699,7 +699,6 @@ window.addEventListener('keydown', (e) => {
         closeModal(profileModal);
         closeModal(settingsModal);
         closeModal(scheduleModal);
-        closeModal(cycleModal);
         closeModal(drinkModal);
     }
 });
@@ -770,9 +769,18 @@ if (window.AndroidBridge && AndroidBridge.checkForUpdates) {
 }
 
 // ==========================================
-// ВІКНО РОЗКЛАДУ
+// ВІКНО РОЗКЛАДУ: календар місяця + обраний день + додавання активностей
 // ==========================================
 let selectedActivity = 'run';
+let selectedCategory = 'sport';
+let selectedDay = new Date();      // обраний у календарі день
+let calMonth = null;               // перше число місяця, що показується
+const UA_MONTHS_NOM = ['Січень', 'Лютий', 'Березень', 'Квітень', 'Травень', 'Червень',
+    'Липень', 'Серпень', 'Вересень', 'Жовтень', 'Листопад', 'Грудень'];
+
+function isCycleMode() {
+    return womenMode() === 'cycle';
+}
 
 function activityHint(act) {
     const iv = intervalFor(act);
@@ -780,42 +788,115 @@ function activityHint(act) {
     return `${act.emoji} ${act.name}: ${act.ml ? `+${act.ml} мл/год до норми` : 'норма не змінюється'}, ${remind}.`;
 }
 
-function renderActivityGrid() {
-    activityGrid.innerHTML = ACTIVITIES.map(a =>
-        `<button type="button" class="drink-tile${a.id === selectedActivity ? ' selected' : ''}" role="radio" ` +
-        `aria-checked="${a.id === selectedActivity}" data-activity="${a.id}">` +
-        `<span class="drink-emoji">${a.emoji}</span><span class="drink-name">${a.short || a.name}</span></button>`
-    ).join('');
-    activityInfo.textContent = activityHint(ACTIVITY_BY_ID[selectedActivity]);
+// ---------- Календар ----------
+
+function renderScheduleCalendar() {
+    if (!calMonth) calMonth = new Date(selectedDay.getFullYear(), selectedDay.getMonth(), 1);
+    $('cal-month').textContent = `${UA_MONTHS_NOM[calMonth.getMonth()]} ${calMonth.getFullYear()}`;
+
+    const cycle = isCycleMode();
+    const todayKey = dateKey(new Date());
+    const selKey = dateKey(selectedDay);
+    const starts = new Set(periodStarts());
+    const offset = (calMonth.getDay() + 6) % 7;  // тиждень з понеділка
+    const daysInMonth = new Date(calMonth.getFullYear(), calMonth.getMonth() + 1, 0).getDate();
+
+    let html = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Нд'].map(d => `<div class="cal-head">${d}</div>`).join('');
+    for (let i = 0; i < offset; i++) html += '<div></div>';
+    for (let d = 1; d <= daysInMonth; d++) {
+        const date = new Date(calMonth.getFullYear(), calMonth.getMonth(), d);
+        const key = dateKey(date);
+        const cls = ['cal-day'];
+        let label = `${d}`;
+        if (cycle) {
+            const info = cycleInfo(date);
+            if (info) {
+                cls.push(`ph-${info.phase}`);
+                if (info.predicted) cls.push('predicted');
+                label += `: ${PHASES[info.phase].name}${info.predicted ? ' (прогноз)' : ''}`;
+            }
+            if (starts.has(key)) cls.push('start');
+        }
+        // Крапка — разові активності саме на цей день (щоденні були б на кожному дні)
+        const planned = scheduleEntries().some(e => entryRepeat(e) === 'once' && e.date === key);
+        if (planned) { cls.push('has-plan'); label += ', є активності'; }
+        if (key === todayKey) cls.push('today');
+        if (key === selKey) cls.push('selected');
+        html += `<button type="button" class="${cls.join(' ')}" data-date="${key}" aria-label="${label}">${d}</button>`;
+    }
+    $('cal-grid').innerHTML = html;
+    document.querySelectorAll('#schedule-modal .cycle-only').forEach(el => {
+        if (el.id !== 'btn-mark-period') el.classList.toggle('hidden', !cycle);
+    });
 }
 
-function renderScheduleList() {
-    const now = Date.now();
-    const cur = currentActivity();
-    const entries = scheduleEntries().slice().sort((a, b) => minutesOf(a.start) - minutesOf(b.start));
+// ---------- Обраний день ----------
 
-    if (!entries.length) {
-        scheduleList.innerHTML = '<li class="schedule-empty">Поки що порожньо. Додайте свої активності нижче.</li>';
-    } else {
-        scheduleList.innerHTML = entries.map(e => {
-            const act = ACTIVITY_BY_ID[e.type];
-            if (!act) return '';
-            const isNow = cur && cur.entry.id === e.id;
-            const iv = intervalFor(act);
-            const meta = [act.ml ? `+${act.ml} мл/год` : null,
-                iv === null ? 'без нагадувань' : `кожні ${iv} хв`,
-                e.daily ? 'щодня' : 'сьогодні'].filter(Boolean).join(' · ');
-            return `<li class="schedule-item${isNow ? ' now' : ''}">` +
-                `<span class="schedule-emoji">${act.emoji}</span>` +
-                `<span class="schedule-text"><b>${act.name}</b> ${e.start}–${e.end}${isNow ? ' <span class="schedule-now">зараз</span>' : ''}` +
-                `<br><small>${meta}</small></span>` +
-                `<button type="button" class="schedule-del" data-del="${e.id}" aria-label="Видалити">✕</button></li>`;
-        }).join('');
+function entriesForDay(day) {
+    return scheduleEntries()
+        .filter(e => entryAppliesOn(e, day))
+        .sort((a, b) => minutesOf(a.start) - minutesOf(b.start));
+}
+
+function renderDayPanel() {
+    const day = selectedDay;
+    const isToday = dateKey(day) === dateKey(new Date());
+    $('day-title').textContent = `${UA_WEEKDAYS[day.getDay()]}, ${day.getDate()} ${UA_MONTHS_GEN[day.getMonth()]}${isToday ? ' · сьогодні' : ''}`;
+
+    const cur = isToday ? currentActivity() : null;
+    const entries = entriesForDay(day);
+    scheduleList.innerHTML = entries.length ? entries.map(e => {
+        const act = ACTIVITY_BY_ID[e.type];
+        if (!act) return '';
+        const isNow = cur && cur.entry.id === e.id;
+        const iv = intervalFor(act);
+        const meta = [act.ml ? `+${act.ml} мл/год` : null,
+            iv === null ? 'без нагадувань' : `кожні ${iv} хв`,
+            REPEAT_LABELS[entryRepeat(e)]].filter(Boolean).join(' · ');
+        return `<li class="schedule-item${isNow ? ' now' : ''}">` +
+            `<span class="schedule-emoji">${act.emoji}</span>` +
+            `<span class="schedule-text"><b>${act.name}</b> ${e.start}–${e.end}${isNow ? ' <span class="schedule-now">зараз</span>' : ''}` +
+            `<br><small>${meta}</small></span>` +
+            `<button type="button" class="schedule-del" data-del="${e.id}" aria-label="Видалити${entryRepeat(e) !== 'once' ? ' (з усіх днів)' : ''}">✕</button></li>`;
+    }).join('') : '<li class="schedule-empty">На цей день нічого не заплановано.</li>';
+
+    // Підсумок: на скільки активності збільшать норму в цей день
+    const extra = activitiesExtraMl(day.getTime());
+    let summary = `Активності ${isToday ? 'сьогодні додають' : 'додадуть'} ${extra ? `+${extra} мл` : '0 мл'} до норми.`;
+    if (isToday) {
+        summary += ` Норма: ${gameState.calculatedGoal} мл. Наступне нагадування — о ${formatHM(Math.max(gameState.nextDrinkAt, Date.now()))}.`;
     }
+    if (isCycleMode()) {
+        const info = cycleInfo(day);
+        if (info) summary += ` ${PHASES[info.phase].emoji} ${info.day}-й день циклу (${PHASES[info.phase].name.toLowerCase()}${info.predicted ? ', прогноз' : ''}).`;
+    }
+    scheduleSummary.textContent = summary;
 
-    const extra = activitiesExtraMl();
-    scheduleSummary.textContent = `Сьогодні активності додають ${extra ? `+${extra} мл` : '0 мл'} до норми. ` +
-        `Норма: ${gameState.calculatedGoal} мл. Наступне нагадування — о ${formatHM(Math.max(gameState.nextDrinkAt, now))}.`;
+    // Кнопка позначки місячних для обраного дня (лише в режимі циклу і не в майбутньому)
+    const markBtn = $('btn-mark-period');
+    const canMark = isCycleMode() && dateKey(day) <= dateKey(new Date());
+    markBtn.classList.toggle('hidden', !canMark);
+    if (canMark) {
+        markBtn.textContent = periodStarts().includes(dateKey(day))
+            ? '✖️ Зняти позначку початку місячних' : '🩸 Позначити початок місячних цього дня';
+    }
+}
+
+// ---------- Додавання активностей ----------
+
+function renderActivityPicker() {
+    activityCats.innerHTML = ACTIVITY_CATEGORIES.map(c =>
+        `<button type="button" class="drink-tile${c.id === selectedCategory ? ' selected' : ''}" role="tab" ` +
+        `aria-selected="${c.id === selectedCategory}" data-cat="${c.id}">` +
+        `<span class="drink-emoji">${c.emoji}</span><span class="drink-name">${c.short || c.name}</span></button>`
+    ).join('');
+    const cat = ACTIVITY_CATEGORIES.find(c => c.id === selectedCategory);
+    activityGrid.innerHTML = cat.items.map(id => {
+        const a = ACTIVITY_BY_ID[id];
+        return `<button type="button" class="drink-chip${id === selectedActivity ? ' selected' : ''}" role="radio" ` +
+            `aria-checked="${id === selectedActivity}" data-activity="${id}">${a.emoji} ${a.short || a.name}</button>`;
+    }).join('');
+    activityInfo.textContent = activityHint(ACTIVITY_BY_ID[selectedActivity]);
 }
 
 // Пропонуємо найближчу «круглу» годину як початок
@@ -826,26 +907,66 @@ function suggestTimes() {
     inputActivityEnd.value = formatHM(d.getTime() + 60 * MIN_MS);
 }
 
+function renderSchedule() {
+    renderScheduleCalendar();
+    renderDayPanel();
+}
+
 function openSchedule() {
-    renderActivityGrid();
-    renderScheduleList();
+    selectedDay = new Date();
+    calMonth = null;
+    renderSchedule();
+    renderActivityPicker();
     suggestTimes();
     openModal(scheduleModal);
 }
 
-// Розклад змінився: оновити норму, таймер, нагадування й списки
+// Розклад змінився: оновити норму, таймер, нагадування і вікно
 function scheduleChanged() {
     refreshDue();
     recalculateWaterGoal();   // зберігає стан і синхронізує нагадування
-    renderScheduleList();
+    renderSchedule();
     renderCurrentActivity();
 }
 
-activityGrid.addEventListener('click', (e) => {
-    const tile = e.target.closest('[data-activity]');
+// ---------- Події ----------
+
+$('cal-grid').addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-date]');
+    if (!btn) return;
+    selectedDay = keyToDate(btn.dataset.date);
+    renderSchedule();
+});
+
+$('btn-cal-prev').addEventListener('click', () => {
+    calMonth = new Date(calMonth.getFullYear(), calMonth.getMonth() - 1, 1);
+    renderScheduleCalendar();
+});
+$('btn-cal-next').addEventListener('click', () => {
+    calMonth = new Date(calMonth.getFullYear(), calMonth.getMonth() + 1, 1);
+    renderScheduleCalendar();
+});
+
+$('btn-mark-period').addEventListener('click', () => {
+    togglePeriodStart(dateKey(selectedDay));
+    recalculateWaterGoal();  // фаза могла змінитися — оновлюємо норму й зберігаємо
+    renderSchedule();
+});
+
+activityCats.addEventListener('click', (e) => {
+    const tile = e.target.closest('[data-cat]');
     if (!tile) return;
-    selectedActivity = tile.dataset.activity;
-    renderActivityGrid();
+    selectedCategory = tile.dataset.cat;
+    const cat = ACTIVITY_CATEGORIES.find(c => c.id === selectedCategory);
+    if (!cat.items.includes(selectedActivity)) selectedActivity = cat.items[0];
+    renderActivityPicker();
+});
+
+activityGrid.addEventListener('click', (e) => {
+    const chip = e.target.closest('[data-activity]');
+    if (!chip) return;
+    selectedActivity = chip.dataset.activity;
+    renderActivityPicker();
 });
 
 btnAddActivity.addEventListener('click', () => {
@@ -854,8 +975,9 @@ btnAddActivity.addEventListener('click', () => {
         alert('Вкажіть час початку й кінця активності.');
         return;
     }
-    const entry = { id: `a${Date.now()}`, type: selectedActivity, start, end, daily: inputActivityDaily.checked };
-    if (!entry.daily) entry.date = dateKey(new Date());
+    const repeat = inputActivityRepeat.value;
+    const entry = { id: `a${Date.now()}`, type: selectedActivity, start, end, repeat };
+    if (repeat === 'once') entry.date = dateKey(selectedDay);
     gameState.schedule = scheduleEntries().concat(entry);
     scheduleChanged();
 });
@@ -929,34 +1051,14 @@ function readWomenInputs() {
 inputGender.addEventListener('change', updateWomenSectionVisibility);
 inputWomenMode.addEventListener('change', updateWomenSectionVisibility);
 
-// Календар відкривається з профілю
+// Календар циклу — це той самий календар розкладу
 $('btn-open-cycle').addEventListener('click', () => {
     // Тривалості з полів застосовуємо одразу, щоб прогноз у календарі був актуальний
     gameState.cycleLength = Math.min(45, Math.max(20, parseInt(inputCycleLength.value, 10) || 28));
     gameState.periodLength = Math.min(10, Math.max(2, parseInt(inputPeriodLength.value, 10) || 5));
-    calendarMonth = null;
-    renderCycleCalendar();
+    gameState.womenMode = inputWomenMode.value;
     closeModal(profileModal);
-    openModal(cycleModal);
-});
-$('btn-back-from-cycle').addEventListener('click', () => { closeModal(cycleModal); openModal(profileModal); });
-$('btn-close-cycle').addEventListener('click', () => closeModal(cycleModal));
-
-$('btn-cycle-prev').addEventListener('click', () => {
-    calendarMonth = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() - 1, 1);
-    renderCycleCalendar();
-});
-$('btn-cycle-next').addEventListener('click', () => {
-    calendarMonth = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + 1, 1);
-    renderCycleCalendar();
-});
-
-$('cycle-grid').addEventListener('click', (e) => {
-    const day = e.target.closest('[data-date]');
-    if (!day) return;
-    togglePeriodStart(day.dataset.date);
-    recalculateWaterGoal();  // фаза могла змінитися — оновлюємо норму й зберігаємо
-    renderCycleCalendar();
+    openSchedule();
 });
 
 // Підпис у картці дня: день циклу / тиждень вагітності

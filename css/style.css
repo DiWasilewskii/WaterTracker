@@ -1321,3 +1321,62 @@ body.chart-open .pet { height: clamp(110px, calc(38vh - 110px), 240px); }
     vertical-align: middle;
     margin-right: 3px;
 }
+
+/* ==========================================
+   14. РОЗКЛАД + КАЛЕНДАР
+   ========================================== */
+.cal-day { position: relative; }
+
+/* Обраний день */
+.cal-day.selected {
+    box-shadow: 0 0 0 2px #ffcc00 inset;
+    font-weight: bold;
+}
+
+/* Крапка «на цей день є активності» */
+.cal-day.has-plan::after,
+.dot-activity {
+    content: '';
+    position: absolute;
+    left: 50%;
+    bottom: 3px;
+    width: 5px;
+    height: 5px;
+    margin-left: -2.5px;
+    border-radius: 50%;
+    background: #ffcc00;
+}
+
+.cal-legend .dot-activity {
+    position: static;
+    margin: 0 3px 0 0;
+    width: 8px;
+    height: 8px;
+}
+
+.day-panel {
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 1px dashed rgba(255, 255, 255, 0.18);
+}
+
+.day-panel h4 { margin: 0; font-size: 15px; }
+.day-panel .btn-secondary { margin: 0 0 8px; }
+
+/* Категорії активностей: 5 плиток в ряд */
+.activity-cats {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 5px;
+}
+
+.activity-cats .drink-tile { min-height: 54px; padding: 5px 1px; }
+.activity-cats .drink-emoji { font-size: 19px; }
+.activity-cats .drink-name { font-size: 9px; }
+
+/* Активності категорії — «пігулки» */
+.activity-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}

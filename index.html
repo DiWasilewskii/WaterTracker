@@ -133,7 +133,7 @@
                         <label>Цикл (днів): <input type="number" inputmode="numeric" id="input-cycle-length" min="20" max="45" value="28"></label>
                         <label>Місячні (днів): <input type="number" inputmode="numeric" id="input-period-length" min="2" max="10" value="5"></label>
                     </div>
-                    <button type="button" id="btn-open-cycle" class="btn-secondary">📅 Календар циклу</button>
+                    <button type="button" id="btn-open-cycle" class="btn-secondary">📅 Календар циклу і розклад</button>
                 </div>
 
                 <div id="women-pregnancy" class="women-sub hidden">
@@ -199,52 +199,55 @@
         </div>
     </div>
 
-    <!-- Модальне вікно розкладу активностей -->
+    <!-- Модальне вікно: розклад і календар (активності + цикл) -->
     <div id="schedule-modal" class="modal hidden">
         <div class="modal-content">
             <button type="button" id="btn-close-schedule" class="close-modal" aria-label="Закрити">&times;</button>
-            <h3>🗓️ Розклад на день</h3>
+            <h3>🗓️ Розклад і календар</h3>
 
-            <p id="schedule-summary" class="schedule-summary"></p>
-            <ul id="schedule-list" class="schedule-list"></ul>
+            <!-- Календар місяця -->
+            <div class="cal-nav">
+                <button type="button" id="btn-cal-prev" class="btn-link" aria-label="Попередній місяць">‹</button>
+                <span id="cal-month"></span>
+                <button type="button" id="btn-cal-next" class="btn-link" aria-label="Наступний місяць">›</button>
+            </div>
+            <div id="cal-grid" class="cal-grid"></div>
+            <div id="cal-legend" class="cal-legend">
+                <span><i class="dot dot-activity"></i> заплановано</span>
+                <span class="cycle-only"><i class="dot ph-period"></i> місячні</span>
+                <span class="cycle-only"><i class="dot ph-period predicted"></i> прогноз</span>
+                <span class="cycle-only"><i class="dot ph-fertile"></i> фертильні</span>
+                <span class="cycle-only"><i class="dot ph-ovulation"></i> овуляція</span>
+            </div>
 
+            <!-- Обраний день -->
+            <div class="day-panel">
+                <h4 id="day-title"></h4>
+                <p id="schedule-summary" class="schedule-summary"></p>
+                <button type="button" id="btn-mark-period" class="btn-secondary cycle-only hidden"></button>
+                <ul id="schedule-list" class="schedule-list"></ul>
+            </div>
+
+            <!-- Додати активність на обраний день -->
             <div class="schedule-add">
                 <h4>➕ Додати активність</h4>
+                <div id="activity-cats" class="activity-cats" role="tablist" aria-label="Категорія активності"></div>
                 <div id="activity-grid" class="activity-grid" role="radiogroup" aria-label="Активність"></div>
                 <p id="activity-info" class="notif-hint"></p>
                 <div class="schedule-times">
                     <label>Початок <input type="time" id="input-activity-start" value="18:00"></label>
                     <label>Кінець <input type="time" id="input-activity-end" value="19:00"></label>
                 </div>
-                <label class="schedule-daily"><input type="checkbox" id="input-activity-daily"> Повторювати щодня</label>
+                <label class="women-field">Повторювати:
+                    <select id="input-activity-repeat">
+                        <option value="once">Лише цей день</option>
+                        <option value="daily">Щодня</option>
+                        <option value="weekdays">По буднях (пн–пт)</option>
+                        <option value="weekends">По вихідних (сб–нд)</option>
+                    </select>
+                </label>
                 <button type="button" id="btn-add-activity" class="btn-sub">Додати в розклад</button>
             </div>
-        </div>
-    </div>
-
-    <!-- Модальне вікно календаря циклу -->
-    <div id="cycle-modal" class="modal hidden">
-        <div class="modal-content">
-            <button type="button" id="btn-close-cycle" class="close-modal" aria-label="Закрити">&times;</button>
-            <h3>📅 Календар циклу</h3>
-
-            <div class="cal-nav">
-                <button type="button" id="btn-cycle-prev" class="btn-link" aria-label="Попередній місяць">‹</button>
-                <span id="cycle-month"></span>
-                <button type="button" id="btn-cycle-next" class="btn-link" aria-label="Наступний місяць">›</button>
-            </div>
-            <div id="cycle-grid" class="cal-grid"></div>
-
-            <div class="cal-legend">
-                <span><i class="dot ph-period"></i> місячні</span>
-                <span><i class="dot ph-period predicted"></i> прогноз</span>
-                <span><i class="dot ph-fertile"></i> фертильні</span>
-                <span><i class="dot ph-ovulation"></i> овуляція</span>
-            </div>
-            <p id="cycle-summary" class="schedule-summary"></p>
-            <p class="notif-hint">Торкніться дня, щоб відмітити (або зняти) початок місячних. З кількох відміток гра сама порахує середню тривалість циклу. Прогноз орієнтовний і не підходить для контрацепції.</p>
-
-            <button type="button" id="btn-back-from-cycle" class="btn-secondary">← До профілю</button>
         </div>
     </div>
 
