@@ -1406,3 +1406,28 @@ body.chart-open .pet { height: clamp(110px, calc(38vh - 110px), 240px); }
     vertical-align: bottom;
 }
 #account-status:empty { display: none; }
+
+/* Підказка для iPhone: встановити на початковий екран */
+.install-hint {
+    position: fixed;
+    left: 12px;
+    right: 12px;
+    bottom: max(12px, env(safe-area-inset-bottom));
+    z-index: 900;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 40px 12px 12px;
+    border-radius: 14px;
+    background: rgba(20, 32, 44, 0.96);
+    border: 1px solid rgba(77, 166, 255, 0.5);
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.4);
+    font-size: 13px;
+    line-height: 1.4;
+    color: #e1e1e6;
+}
+.install-hint.hidden { display: none; }
+.install-hint p { margin: 0; }
+.install-hint .install-icon { font-size: 26px; }
+.install-hint .share-glyph { color: #4da6ff; font-weight: bold; }
+.install-hint .close-modal { top: 6px; right: 8px; }

@@ -1,5 +1,5 @@
 // Офлайн-кеш для веб-версії: файли гри — з мережі з резервом у кеші, API погоди не кешується
-const CACHE = 'krapelka-v8';
+const CACHE = 'krapelka-v9';
 const ASSETS = [
     './',
     'index.html',
@@ -19,7 +19,8 @@ const ASSETS = [
     'img/charachter/sick_water.png',
     'img/charachter/death_water.png',
     'img/icon-192.png',
-    'img/icon-512.png'
+    'img/icon-512.png',
+    'img/apple-touch-icon.png'
 ];
 
 self.addEventListener('install', (e) => {

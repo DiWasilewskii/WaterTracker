@@ -30,7 +30,8 @@ $Files = @(
     "img/charachter/drink_water.png",
     "img/charachter/sick_water.png",
     "img/charachter/death_water.png",
-    "img/icon-192.png"
+    "img/icon-192.png",
+    "img/apple-touch-icon.png"
 )
 
 # Текстові файли в git зберігаються з LF — рахуємо хеш саме для такого вмісту,

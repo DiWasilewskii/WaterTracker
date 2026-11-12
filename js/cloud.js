@@ -16,6 +16,16 @@ const Cloud = (() => {
     const TOKEN_URL = 'https://securetoken.googleapis.com/v1/token?key=';
     const DOC_BASE = `https://firestore.googleapis.com/v1/projects/${CFG.projectId}/databases/(default)/documents/users/`;
 
+    // Економія безкоштовного ліміту Firestore (20 тис. записів і 50 тис. читань на день):
+    // запис — не частіше ніж раз на 15 хв і при згортанні гри, лише якщо дані справді змінились;
+    // читання — при кожному запуску і при поверненні в гру, якщо минуло 5+ хв.
+    const PUSH_EVERY_MS = 15 * 60000;
+    const PULL_EVERY_MS = 5 * 60000;
+    // Поля, які кожен пристрій рахує сам (погода, показані репліки тощо): їхня зміна
+    // не варта запису в хмару
+    const VOLATILE = ['linesUsed', 'notifSeq', 'nextDrinkAt', 'currentTemp', 'weatherCode',
+        'weatherFetchedAt', 'calculatedGoal'];
+
     let meta = loadMeta();
     let ready = false;        // перша перевірка хмари в цьому запуску завершена
     let pushTimer = null;
@@ -29,6 +39,20 @@ const Cloud = (() => {
         try { localStorage.setItem(META_KEY, JSON.stringify(meta)); } catch (e) { /* ignore */ }
     }
     const signedIn = () => !!(meta.uid && meta.refreshToken);
+
+    // Відбиток стану без «шумних» полів — щоб не відправляти те, що вже є в хмарі
+    function fingerprint(str) {
+        let s = str || '';
+        try {
+            const o = JSON.parse(s);
+            VOLATILE.forEach(k => { delete o[k]; });
+            s = JSON.stringify(o);
+        } catch (e) { /* лишаємо як є */ }
+        let h = 5381;
+        for (let i = 0; i < s.length; i++) h = ((h * 33) ^ s.charCodeAt(i)) >>> 0;
+        return s.length + ':' + h.toString(36);
+    }
+    const localState = () => { try { return localStorage.getItem(STORAGE_KEY); } catch (e) { return null; } };
 
     // ---------- Firebase Auth ----------
     const AUTH_ERRORS = {
@@ -130,6 +154,7 @@ const Cloud = (() => {
         if (!signedIn()) return;
         if (pushing) return pushing;
         clearTimeout(pushTimer);
+        pushTimer = null;
         const state = localStorage.getItem(STORAGE_KEY);
         if (!state) return;
         const updatedAt = Date.now();
@@ -139,6 +164,8 @@ const Cloud = (() => {
         }, keepalive).then(() => {
             if (meta.uid !== uid) return;   // поки відправляли, вийшли з акаунта
             meta.rev = updatedAt;
+            meta.hash = fingerprint(state);
+            meta.pushedAt = Date.now();
             // Зміни, зроблені під час відправки, лишаються «брудними»
             if (!meta.changedAt || meta.changedAt <= updatedAt) meta.dirty = false;
             meta.syncedAt = Date.now();
@@ -153,9 +180,12 @@ const Cloud = (() => {
         return pushing;
     }
 
+    // Таймер не перезапускається на кожне збереження: перша зміна ставить його,
+    // наступні просто потрапляють у той самий запис
     function schedulePush() {
-        clearTimeout(pushTimer);
-        pushTimer = setTimeout(() => push(false), 4000);
+        if (pushTimer) return;
+        const delay = Math.max(30000, (meta.pushedAt || 0) + PUSH_EVERY_MS - Date.now());
+        pushTimer = setTimeout(() => { pushTimer = null; push(false); }, delay);
     }
 
     // Хмарна копія замінює дані пристрою — гра перезапускається з ними
@@ -165,6 +195,7 @@ const Cloud = (() => {
         try { localStorage.setItem(STORAGE_KEY, remote.state); } catch (e) { return; }
         reloading = true;
         meta.rev = remote.updatedAt;
+        meta.hash = fingerprint(remote.state);
         meta.dirty = false;
         meta.changedAt = 0;
         meta.syncedAt = Date.now();
@@ -173,8 +204,12 @@ const Cloud = (() => {
     }
 
     // Перевірка хмари: при відкритті гри та поверненні до неї
-    async function sync() {
+    // force — при запуску гри і кнопкою «Синхронізувати»; інакше не частіше ніж раз на 5 хв
+    let pulledAt = 0;
+    async function sync(force) {
         if (!enabled || !signedIn()) { ready = true; return; }
+        if (!force && ready && Date.now() - pulledAt < PULL_EVERY_MS) return;
+        pulledAt = Date.now();
         try {
             const remote = await pull();
             if (remote && remote.updatedAt > (meta.rev || 0)
@@ -194,6 +229,11 @@ const Cloud = (() => {
     // Викликається з saveState(): позначаємо зміни й відкладено відправляємо
     function onLocalSave() {
         if (!enabled || !signedIn() || !ready) return;
+        if (fingerprint(localState()) === meta.hash) {
+            // Повернулись до того, що вже в хмарі (або змінились лише «шумні» поля)
+            if (meta.dirty) { meta.dirty = false; saveMeta(); }
+            return;
+        }
         meta.dirty = true;
         meta.changedAt = Date.now();
         saveMeta();
@@ -209,6 +249,7 @@ const Cloud = (() => {
     async function signUp(email, password) {
         setSession(await authCall('signUp', { email, password, returnSecureToken: true }));
         ready = true;
+        pulledAt = Date.now();
         meta.dirty = true;
         meta.changedAt = Date.now();
         saveMeta();
@@ -218,6 +259,7 @@ const Cloud = (() => {
     async function signIn(email, password) {
         setSession(await authCall('signInWithPassword', { email, password, returnSecureToken: true }));
         ready = true;
+        pulledAt = Date.now();
         const remote = await pull().catch(() => null);
         if (remote) {
             const when = new Date(remote.updatedAt).toLocaleString('uk-UA', { dateStyle: 'short', timeStyle: 'short' });
@@ -232,6 +274,7 @@ const Cloud = (() => {
 
     function signOut() {
         clearTimeout(pushTimer);
+        pushTimer = null;
         meta = {};
         statusText = '';
         try { localStorage.removeItem(META_KEY); } catch (e) { /* ignore */ }
@@ -325,7 +368,7 @@ const Cloud = (() => {
             run(() => resetPassword(email), 'Лист для зміни пароля надіслано на ' + email + '.');
         });
         el('btn-sync-now').addEventListener('click', () => run(async () => {
-            if (meta.dirty) await push(false); else await sync();
+            if (meta.dirty) await push(false); else await sync(true);
         }));
         el('btn-sign-out').addEventListener('click', () => {
             if (meta.dirty) flush();

@@ -7,6 +7,11 @@
     <meta name="mobile-web-app-capable" content="yes">
     <link rel="manifest" href="manifest.json">
     <link rel="icon" href="img/icon-192.png">
+    <!-- iPhone / iPad: застосунок з початкового екрана (Safari → «Поділитися» → «На початковий екран») -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="Крапелька">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="img/apple-touch-icon.png">
     <link rel="preload" as="image" href="img/charachter/regular_water.png">
     <title>Крапелька</title>
     <!-- Підключення стилів з папки css -->
@@ -315,6 +320,13 @@
     <script src="js/women.js" defer></script>
     <script src="js/schedule.js" defer></script>
     <script src="js/chart.js" defer></script>
+    <!-- Підказка для iPhone: як встановити гру на початковий екран -->
+    <div id="ios-install" class="install-hint hidden" role="note">
+        <span class="install-icon">💧</span>
+        <p>Встанови Крапельку: натисни <b>«Поділитися»</b> <span class="share-glyph" aria-hidden="true">⬆︎</span> внизу Safari, а потім <b>«На початковий екран»</b>.</p>
+        <button type="button" id="btn-ios-install-close" class="close-modal" aria-label="Закрити">&times;</button>
+    </div>
+
     <script src="js/firebase-config.js" defer></script>
     <script src="js/cloud.js" defer></script>
     <script src="js/app.js" defer></script>

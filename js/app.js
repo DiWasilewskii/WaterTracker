@@ -334,7 +334,7 @@ function initGame() {
     // Акаунт: підтягуємо новішу копію з іншого пристрою або відправляємо свою
     if (typeof Cloud !== 'undefined') {
         Cloud.initUI();
-        Cloud.sync();
+        Cloud.sync(true);
     }
 }
 
@@ -1102,6 +1102,24 @@ if (document.readyState === 'loading') {
 } else {
     initGame();
 }
+
+// iPhone / iPad у Safari: підказуємо встановити гру на початковий екран
+// (там вона відкривається на весь екран і зберігає дані надійніше)
+(function iosInstallHint() {
+    const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent)
+        || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    const installed = navigator.standalone === true
+        || (window.matchMedia && matchMedia('(display-mode: standalone)').matches);
+    if (!isIOS || installed || window.AndroidBridge) return;
+    const KEY = 'wt_ios_hint_closed';
+    try { if (Date.now() - (+localStorage.getItem(KEY) || 0) < 7 * 864e5) return; } catch (e) { /* ignore */ }
+    const hint = $('ios-install');
+    hint.classList.remove('hidden');
+    $('btn-ios-install-close').addEventListener('click', () => {
+        hint.classList.add('hidden');
+        try { localStorage.setItem(KEY, String(Date.now())); } catch (e) { /* ignore */ }
+    });
+})();
 
 // Офлайн-кеш для веб-версії (у APK не потрібен — файли вже всередині)
 if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
